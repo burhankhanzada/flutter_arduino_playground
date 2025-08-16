@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter_arduino_playground/models/component_model.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/arduino_painter.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/breadebord_painter.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/button_painter.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/resistor_painter.dart';
@@ -12,5 +14,15 @@ final List<ComponentModel> components = [
     name: 'Resistor',
     size: Size(50, 15),
     painter: ResistorPainter(),
+  ),
+  ComponentModel(
+    name: 'Breadboard',
+    size: Size(300, 500),
+    painter: BreadboardPainter(),
+  ),
+  ComponentModel(
+    name: 'Arduino Uno',
+    size: Size(370, 290),
+    painter: ArduinoPainter(),
   ),
 ];

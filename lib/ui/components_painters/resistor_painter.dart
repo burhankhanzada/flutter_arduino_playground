@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ResistorPainter extends CustomPainter {
   final _paint = Paint();
@@ -77,7 +78,14 @@ class ResistorPainter extends CustomPainter {
     );
 
     TextPainter textPainter = TextPainter(
-      text: TextSpan(text: '220'),
+      text: TextSpan(
+        text: '220',
+        style: GoogleFonts.jetBrainsMono(
+          color: Colors.white,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       textDirection: TextDirection.ltr,
     );
 

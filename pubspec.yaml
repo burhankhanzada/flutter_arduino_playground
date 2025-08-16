@@ -12,6 +12,8 @@ dependencies:
 
   super_drag_and_drop: ^0.9.1
   interactive_viewer_2: ^0.0.10
+  flutter_svg: ^2.2.0
+  google_fonts: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -20,3 +22,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/
