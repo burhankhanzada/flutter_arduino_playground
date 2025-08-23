@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/constants.dart';
-import 'package:flutter_arduino_playground/models/placed_component.dart';
-import 'package:flutter_arduino_playground/ui/widgets/placed_component.dart';
-import 'package:interactive_viewer_2/interactive_viewer_2.dart';
+import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
+import 'package:flutter_arduino_playground/ui/canvas/canvas.dart';
+import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 class CanvasArea extends StatefulWidget {
@@ -13,114 +13,60 @@ class CanvasArea extends StatefulWidget {
 }
 
 class _CanvasAreaState extends State<CanvasArea> {
-  final List<PlacedComponentModel> placedComponents = [];
+  final controller = CanvasController();
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Card.outlined(
         clipBehavior: Clip.antiAlias,
-        child: InteractiveViewer2(
-          child: DropRegion(
-            formats: Formats.standardFormats,
-            onDropOver: (event) => DropOperation.copy,
-            onPerformDrop: (event) async {
-              final localData = event.session.items
-                  .where((item) => item.localData != null)
-                  .map((item) => item.localData)
-                  .firstOrNull;
-
-              String? componentName;
-
-              if (localData != null) {
-                componentName = localData as String;
-              }
-
-              if (componentName != null) {
-                final renderBox = context.findRenderObject() as RenderBox;
-                final localPosition = renderBox.globalToLocal(
-                  event.position.local,
-                );
-
-                final componentType = components.firstWhere(
-                  (type) => type.name == componentName,
-                );
-
-                final placedComponent = PlacedComponentModel(
-                  position: localPosition,
-                  componentModel: componentType,
-                  id: DateTime.now().millisecondsSinceEpoch,
-                );
-
-                setState(() {
-                  placedComponents.add(placedComponent);
-                });
-              }
-            },
-            child: SizedBox(
-              width: double.infinity,
-              height: double.infinity,
-              child: CustomPaint(
-                painter: GridPainter(context),
-                child: Stack(
-                  children: [
-                    ...placedComponents.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final component = entry.value;
-
-                      return PlacedComponenetWidget(
-                        key: ValueKey(component.id),
-                        component: component,
-                        onPanUpdate: (details) {
-                          final newPosition =
-                              component.position + details.delta;
-                          setState(() {
-                            placedComponents[index] = placedComponents[index]
-                                .copyWith(position: newPosition);
-                          });
-                        },
-                        onDoubleTap: () {
-                          setState(() {
-                            placedComponents.removeAt(index);
-                          });
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-          ),
+        child: DropRegion(
+          onPerformDrop: onPerformDrop,
+          formats: Formats.standardFormats,
+          onDropOver: (event) => DropOperation.copy,
+          child: Canvas(controller: controller),
         ),
       ),
     );
   }
-}
 
-class GridPainter extends CustomPainter {
-  GridPainter(this.context);
+  Future<void> onPerformDrop(PerformDropEvent event) async {
+    final localData = event.session.items
+        .where((item) => item.localData != null)
+        .map((item) => item.localData)
+        .firstOrNull;
 
-  final BuildContext context;
+    String? componentName;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Theme.of(context).colorScheme.onSurface.withAlpha(25)
-      ..strokeWidth = 0.5;
-
-    const gridSize = 10;
-
-    // Draw vertical lines
-    for (double x = 0; x <= size.width; x += gridSize) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    if (localData != null) {
+      componentName = localData as String;
     }
 
-    // Draw horizontal lines
-    for (double y = 0; y <= size.height; y += gridSize) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    if (componentName != null) {
+      final renderBox = context.findRenderObject() as RenderBox;
+      final localPosition = renderBox.globalToLocal(event.position.local);
+
+      // Transform local position to canvas coordinates
+      final canvasPositionRaw = (localPosition - controller.offset) / controller.scale;
+      Offset canvasPosition = canvasPositionRaw;
+
+      if (controller.snapToGrid) {
+        canvasPosition = Offset(
+          (canvasPosition.dx / controller.gridSize).round() * controller.gridSize,
+          (canvasPosition.dy / controller.gridSize).round() * controller.gridSize,
+        );
+      }
+
+      final componentModel = components.firstWhere(
+        (type) => type.name == componentName,
+      );
+
+      final canvasComponentModel = CanvasNodeModel(
+        position: canvasPosition,
+        componentModel: componentModel,
+      );
+
+      controller.add(canvasComponentModel);
     }
   }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
