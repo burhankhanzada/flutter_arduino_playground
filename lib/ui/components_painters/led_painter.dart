@@ -1,85 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
 class LEDPainter extends CustomPainter {
   final _paint = Paint();
 
-  late Size size;
-  late Canvas canvas;
+  static const _bodyHeight = 40.0;
+  static const _legsHeight = 20.0;
 
-  late double scaleX;
-  late double scaleY;
+  static const _width = 30.0;
+  static const _height = _bodyHeight + _legsHeight;
 
-  late double vertialStart;
-  late double horzontalStart;
-
-  late double verticalEnd;
-  late double horizontalEnd;
-
-  late final radius = Radius.circular(50 * scaleX);
+  static const componentSize = Size(_width, _height);
 
   @override
   void paint(Canvas canvas, Size size) {
-    this.size = size;
-    this.canvas = canvas;
-
-    // Scale factors to adapt to any size
-    scaleX = size.width / 30;
-    scaleY = size.height / 50;
-
-    vertialStart = 0 * scaleY;
-    horzontalStart = 0 * scaleX;
-
-    verticalEnd = size.height * scaleY;
-    horizontalEnd = size.width * scaleX;
-
-    drawLegs();
-
-    drawBody();
+    _drawLegs(canvas);
+    _drawBody(canvas);
   }
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 
-  void drawBody() {
-    final width = 25 * scaleX;
-    final height = 35 * scaleY;
+  void _drawBody(Canvas canvas) {
+    const topRadius = Radius.circular(15);
+    const bottomRadius = Radius.circular(4);
+    const innerRadius = Radius.circular(2);
 
-    final smallRadius = Radius.circular(10 * scaleX);
-
+    // Main body
     _paint.color = Colors.red;
-    final mainBody = RRect.fromRectAndCorners(
-      Rect.fromLTWH((size.width / 2) - width / 2, 0, width, height),
-      topLeft: radius,
-      topRight: radius,
-      bottomLeft: smallRadius,
-      bottomRight: smallRadius,
+    _paint.style = PaintingStyle.fill;
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTWH(0, 0, _width, _bodyHeight),
+        topLeft: topRadius,
+        topRight: topRadius,
+        bottomLeft: bottomRadius,
+        bottomRight: bottomRadius,
+      ),
+      _paint,
     );
-    canvas.drawRRect(mainBody, _paint);
+
+    // Inner highlight for a slight 3D look
+    _paint.color = Colors.red[300]!;
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTWH(4, 4, _width - 12, _bodyHeight - 10),
+        topLeft: topRadius,
+        topRight: topRadius,
+        bottomLeft: innerRadius,
+        bottomRight: innerRadius,
+      ),
+      _paint,
+    );
   }
 
-  void drawLegs() {
-    _paint.color = Colors.grey;
+  void _drawLegs(Canvas canvas) {
+    _paint.strokeWidth = 4;
+    _paint.strokeCap = StrokeCap.round;
+    _paint.color = Colors.grey[400]!;
 
-    final width = 4 * scaleX;
-    final height = 15 * scaleY;
+    const leftLegX = GridSystem.cellCenter;
+    const rightLegX = _width - GridSystem.cellCenter;
 
-    final veritcalEndOffset = verticalEnd - (height * scaleY);
+    // Legs start slightly inside the bottom of the body
+    const startY = _bodyHeight - 2.0;
 
-    final horzontalStartOffset = 5 * scaleX;
-    final horzontalEndOffset = horizontalEnd - (5 + width * scaleX);
+    // Legs end exactly at the hole center in the bottom-most grid cell
+    const endY = _height - GridSystem.cellCenter;
 
-    final leftLeg = RRect.fromRectAndCorners(
-      Rect.fromLTWH(horzontalStartOffset, veritcalEndOffset, width, height),
-      bottomLeft: radius,
-      bottomRight: radius,
-    );
-    canvas.drawRRect(leftLeg, _paint);
-
-    final rightLeg = RRect.fromRectAndCorners(
-      Rect.fromLTWH(horzontalEndOffset, veritcalEndOffset, width, height),
-      bottomLeft: radius,
-      bottomRight: radius,
-    );
-    canvas.drawRRect(rightLeg, _paint);
+    for (final x in [leftLegX, rightLegX]) {
+      canvas.drawLine(Offset(x, startY), Offset(x, endY), _paint);
+    }
   }
 }

@@ -22,7 +22,7 @@ class GridPainter extends CustomPainter {
     canvas.translate(o.dx, o.dy);
     canvas.scale(s, s);
 
-    final double baseStep = controller.gridSize;
+    final double baseStep = controller.gridCellSize;
 
     void drawLevel(double multiplier, double baseWidth, Color customColor) {
       final double spacing = baseStep * multiplier;
@@ -66,14 +66,12 @@ class GridPainter extends CustomPainter {
 
     // Define levels with increasing spacing, baseWidth, and distinct colors (Inspired by React)
     
-    // Level 4: extra coarse (Deep Purple tint)
-    drawLevel(625, 1.5, Colors.deepPurple);
     // Level 3: coarsest (Purple tint)
-    drawLevel(125, 1.0, Colors.purple);
+    drawLevel(50, 1.2, Colors.purple);
     // Level 2: medium (Orange/Brown tint)
-    drawLevel(25, 1.2, Colors.orange);
-    // Level 1: medium-fine (Green tint)
-    drawLevel(5, 0.8, Colors.green);
+    drawLevel(10, 1.0, Colors.orange);
+    // Level 1: component step (Green tint)
+    drawLevel(2, 0.8, Colors.green);
     // Level 0: finest (Blue/Teal tint)
     drawLevel(1, 0.6, Colors.blue);
 

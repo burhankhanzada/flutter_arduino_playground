@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/pan_mixin.dart';
+import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
 mixin SelectMixin on BaseCanvasController {
   CanvasNodeModel? selectedNodeKey;
@@ -88,10 +89,7 @@ mixin SelectMixin on BaseCanvasController {
     }
 
     if (snapToGrid) {
-      newPosition = Offset(
-        (newPosition.dx / gridSize).round() * gridSize,
-        (newPosition.dy / gridSize).round() * gridSize,
-      );
+      newPosition = GridSystem.snapOffset(newPosition);
     }
 
     final updatedNode = selectedNodeKey!.copyWith(position: newPosition);

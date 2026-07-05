@@ -52,8 +52,8 @@ class _CanvasAreaState extends State<CanvasArea> {
 
       if (controller.snapToGrid) {
         canvasPosition = Offset(
-          (canvasPosition.dx / controller.gridSize).round() * controller.gridSize,
-          (canvasPosition.dy / controller.gridSize).round() * controller.gridSize,
+          (canvasPosition.dx / controller.gridCellSize).round() * controller.gridCellSize,
+          (canvasPosition.dy / controller.gridCellSize).round() * controller.gridCellSize,
         );
       }
 

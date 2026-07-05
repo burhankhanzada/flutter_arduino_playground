@@ -1,102 +1,108 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
 class ResistorPainter extends CustomPainter {
   final _paint = Paint();
 
-  late Size size;
-  late Canvas canvas;
+  static const double gridCellSize = GridSystem.cellSize;
+  static const double gridCellCenter = GridSystem.cellCenter;
 
-  late double scaleX;
-  late double scaleY;
+  static const _bodyWidth = 30.0;
+  static const _bodyHeight = 10.0;
+  static const _legsWidth = 20.0;
 
-  late double vertialStart;
-  late double horzontalStart;
+  static const _width = _bodyWidth + (_legsWidth * 2);
+  static const _height = 30.0;
 
-  late double verticalEnd;
-  late double horizontalEnd;
+  static const _bandWidth = 3.0;
 
-  late final radius = Radius.circular(100 * scaleX);
+  static const componentSize = Size(_width, _height);
 
   @override
   void paint(Canvas canvas, Size size) {
-    this.size = size;
-    this.canvas = canvas;
-
-    // Scale factors to adapt to any size
-    scaleX = size.width / 50;
-    scaleY = size.height / 15;
-
-    vertialStart = 0 * scaleY;
-    horzontalStart = 0 * scaleX;
-
-    verticalEnd = size.height * scaleY;
-    horizontalEnd = size.width * scaleX;
-
-    drawLegs();
-
-    drawBody();
+    _drawLegs(canvas);
+    _drawBody(canvas);
   }
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 
-  void drawLegs() {
-    _paint.color = Colors.grey;
+  void _drawLegs(Canvas canvas) {
+    _paint.strokeWidth = 4;
+    _paint.color = Colors.grey[400]!;
+    _paint.strokeCap = StrokeCap.round;
 
-    final width = 10 * scaleX;
-    final height = 5 * scaleY;
+    const centerY = _height / 2;
+    const leftLegX = gridCellCenter;
+    const rightLegX = _width - gridCellCenter;
 
-    final leftLeg = RRect.fromRectAndCorners(
-      Rect.fromLTWH(0, 5 * scaleX, width, height),
-      topLeft: Radius.circular(100 * scaleX),
-      bottomLeft: Radius.circular(100 * scaleX),
-    );
-    canvas.drawRRect(leftLeg, _paint);
-
-    final rightLeg = RRect.fromRectAndCorners(
-      Rect.fromLTWH(size.width - (10 * scaleX), 5 * scaleY, width, height),
-      topRight: Radius.circular(100 * scaleX),
-      bottomRight: Radius.circular(100 * scaleX),
-    );
-    canvas.drawRRect(rightLeg, _paint);
-  }
-
-  void drawBody() {
-    final width = 30 * scaleX;
-    final height = 15 * scaleY;
-
-    final horzontalStartOffset = 10 * scaleX;
-
-    _paint.color = Colors.yellow[900]!;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(horzontalStartOffset, 0, width, height),
-        Radius.circular(4),
-      ),
+    canvas.drawLine(
+      Offset(leftLegX, centerY),
+      Offset(rightLegX, centerY),
       _paint,
     );
+  }
 
-    TextPainter textPainter = TextPainter(
-      text: TextSpan(
-        text: '220',
-        style: GoogleFonts.jetBrainsMono(
-          color: Colors.white,
-          fontSize: 8,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
+  void _drawBody(Canvas canvas) {
+    const center = Offset(_width / 2, _height / 2);
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: _bodyWidth,
+      height: _bodyHeight,
     );
+    final bodyRRect = RRect.fromRectAndRadius(rect, const Radius.circular(4));
 
-    textPainter.layout();
+    // Main body (Tan/Beige)
+    _paint.shader = const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFFE6D5B8), // Highlight
+        Color(0xFFB89B77), // Shadow
+      ],
+    ).createShader(rect);
 
-    textPainter.paint(
-      canvas,
-      Offset(
-        size.width / 2 - textPainter.size.width / 2,
-        size.height / 2 - textPainter.size.height / 2,
+    canvas.drawRRect(bodyRRect, _paint);
+    _paint.shader = null;
+
+    _drawBands(canvas, bodyRRect);
+
+    canvas.restore();
+  }
+
+  void _drawBands(Canvas canvas, RRect bodyRRect) {
+    canvas.save();
+    canvas.clipRRect(bodyRRect);
+
+    const bandSpacing = 5.0;
+    final startX = -_bodyWidth / 2 + 5.0;
+
+    // Bands (220 Ohm: Red, Black, Brown, Gold)
+    _drawBand(canvas, startX, Colors.red);
+    _drawBand(canvas, startX + bandSpacing, Colors.black);
+    _drawBand(canvas, startX + bandSpacing * 2, Colors.brown);
+
+    // Tolerance band (Gold) slightly separated
+    _drawBand(canvas, _bodyWidth / 2 - 5.0 - _bandWidth, Colors.yellow);
+
+    canvas.restore();
+  }
+
+  void _drawBand(Canvas canvas, double x, Color color) {
+    _paint.color = color;
+    _paint.style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(
+        x.roundToDouble(),
+        -_bodyHeight / 2,
+        _bandWidth,
+        _bodyHeight,
       ),
+      _paint,
     );
   }
 }
