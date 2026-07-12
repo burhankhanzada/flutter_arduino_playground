@@ -32,8 +32,25 @@ mixin SelectMixin on BaseCanvasController {
       }
     }
 
+    bool changed = false;
+
+    // Clear hover position for previous node if it changed
     if (selectedNodeKey != found) {
+      selectedNodeKey?.hoveredLocalPosition = null;
       selectedNodeKey = found;
+      changed = true;
+    }
+
+    // Update hover position for current node
+    if (found != null) {
+      final localPos = canvasPosition - found.position;
+      if (found.hoveredLocalPosition != localPos) {
+        found.hoveredLocalPosition = localPos;
+        changed = true;
+      }
+    }
+
+    if (changed) {
       notifyListeners();
     }
   }

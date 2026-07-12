@@ -11,6 +11,8 @@ class BreadboardPainter extends CustomPainter {
 
   BreadboardPainter({required this.config});
 
+  Offset? hoveredLocalPosition;
+
   final _paint = Paint();
 
   final backgroundColor = Colors.grey[300]!;
@@ -27,7 +29,8 @@ class BreadboardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant BreadboardPainter oldDelegate) =>
-      config != oldDelegate.config;
+      config != oldDelegate.config ||
+      hoveredLocalPosition != oldDelegate.hoveredLocalPosition;
 
   void _drawBackground(Canvas canvas, Size size) {
     _paint.color = backgroundColor;
@@ -45,24 +48,24 @@ class BreadboardPainter extends CustomPainter {
 
     canvas.save();
     canvas.translate(config.boardPadding, 0);
-    _drawPowerRail(canvas, railConfig);
+    _drawPowerRail(canvas, railConfig, isRight: false);
     canvas.restore();
 
     canvas.save();
     canvas.translate(config.rightPowerRailOffset, 0);
-    _drawPowerRail(canvas, railConfig);
+    _drawPowerRail(canvas, railConfig, isRight: true);
     canvas.restore();
   }
 
   void _drawSignalSections(Canvas canvas) {
     canvas.save();
     canvas.translate(config.leftSectionStartOffset, 0);
-    _drawSignalSection(canvas, TerminalStripConfig.left(config));
+    _drawSignalSection(canvas, TerminalStripConfig.left(config), sectionOffsetX: config.leftSectionStartOffset);
     canvas.restore();
 
     canvas.save();
     canvas.translate(config.rightSectionStartOffset, 0);
-    _drawSignalSection(canvas, TerminalStripConfig.right(config));
+    _drawSignalSection(canvas, TerminalStripConfig.right(config), sectionOffsetX: config.rightSectionStartOffset);
     canvas.restore();
   }
 
@@ -77,7 +80,7 @@ class BreadboardPainter extends CustomPainter {
       ..strokeCap = cap;
   }
 
-  void _drawPowerRail(Canvas canvas, PowerRailConfig rail) {
+  void _drawPowerRail(Canvas canvas, PowerRailConfig rail, {bool isRight = false}) {
     final double railTopY = config.firstRowY - config.gridCellSize;
     final double railBottomY = config.lastRowY + config.gridCellSize;
 
@@ -115,32 +118,101 @@ class BreadboardPainter extends CustomPainter {
       _paint,
     );
 
+    final double hitRadius = config.gridCellSize * 0.8;
+    final double baseOffsetX = isRight ? config.rightPowerRailOffset : config.boardPadding;
+
+    bool isColumn1Highlighted = false;
+    bool isColumn2Highlighted = false;
+
+    if (hoveredLocalPosition != null) {
+      final localX = hoveredLocalPosition!.dx - baseOffsetX;
+      final localY = hoveredLocalPosition!.dy;
+
+      // Check if mouse is over any hole in this rail's column 1
+      if ((localX - rail.dot1Offset).abs() < hitRadius) {
+        if (localY >= config.firstRowY - hitRadius && localY <= config.lastRowY + hitRadius) {
+          isColumn1Highlighted = true;
+        }
+      }
+      // Check if mouse is over any hole in this rail's column 2
+      if ((localX - rail.dot2Offset).abs() < hitRadius) {
+        if (localY >= config.firstRowY - hitRadius && localY <= config.lastRowY + hitRadius) {
+          isColumn2Highlighted = true;
+        }
+      }
+    }
+
     canvas.save();
     canvas.translate(0, config.firstRowY);
 
+    if (isColumn1Highlighted || isColumn2Highlighted) {
+      _applyStrokePaint(color: Colors.green, width: 2.0, cap: StrokeCap.round);
+      if (isColumn1Highlighted) {
+        canvas.drawLine(
+          Offset(rail.dot1Offset, 0),
+          Offset(rail.dot1Offset, (config.rowsCount - 1) * config.gridCellStep),
+          _paint,
+        );
+      }
+      if (isColumn2Highlighted) {
+        canvas.drawLine(
+          Offset(rail.dot2Offset, 0),
+          Offset(rail.dot2Offset, (config.rowsCount - 1) * config.gridCellStep),
+          _paint,
+        );
+      }
+    }
+
     for (int row = 0; row < config.rowsCount; row++) {
       final double y = row * config.gridCellStep;
-      _drawHole(canvas, Offset(rail.dot1Offset, y));
-      _drawHole(canvas, Offset(rail.dot2Offset, y));
+      _drawHole(canvas, Offset(rail.dot1Offset, y), isHighlighted: isColumn1Highlighted);
+      _drawHole(canvas, Offset(rail.dot2Offset, y), isHighlighted: isColumn2Highlighted);
     }
     canvas.restore();
   }
 
   /// Draws signal dot holes and all labels for one section (a–e or f–j).
-  void _drawSignalSection(Canvas canvas, TerminalStripConfig section) {
-    _drawSignalDots(canvas, section);
+  void _drawSignalSection(Canvas canvas, TerminalStripConfig section, {required double sectionOffsetX}) {
+    _drawSignalDots(canvas, section, sectionOffsetX: sectionOffsetX);
     _drawSectionLabels(canvas, section);
   }
 
-  void _drawSignalDots(Canvas canvas, TerminalStripConfig section) {
+  void _drawSignalDots(Canvas canvas, TerminalStripConfig section, {required double sectionOffsetX}) {
+    int? highlightedRow;
+    final double hitRadius = config.gridCellSize * 0.8;
+
+    if (hoveredLocalPosition != null) {
+      final localX = hoveredLocalPosition!.dx - sectionOffsetX;
+      final localY = hoveredLocalPosition!.dy - config.firstRowY;
+
+      if (localX >= -hitRadius && localX <= (section.columnLabels.length - 1) * config.gridCellStep + hitRadius) {
+        final rowDouble = localY / config.gridCellStep;
+        final row = rowDouble.round();
+        if ((localY - row * config.gridCellStep).abs() < hitRadius &&
+            row >= 0 &&
+            row < config.rowsCount) {
+          highlightedRow = row;
+        }
+      }
+    }
+
     canvas.save();
     canvas.translate(0, config.firstRowY);
+
+    if (highlightedRow != null) {
+      _applyStrokePaint(color: Colors.green, width: 2.0, cap: StrokeCap.round);
+      canvas.drawLine(
+        Offset(0, highlightedRow * config.gridCellStep),
+        Offset((section.columnLabels.length - 1) * config.gridCellStep, highlightedRow * config.gridCellStep),
+        _paint,
+      );
+    }
 
     for (int col = 0; col < section.columnLabels.length; col++) {
       final double x = col * config.gridCellStep;
       for (int row = 0; row < config.rowsCount; row++) {
         final double y = row * config.gridCellStep;
-        _drawHole(canvas, Offset(x, y));
+        _drawHole(canvas, Offset(x, y), isHighlighted: row == highlightedRow);
       }
     }
     canvas.restore();
@@ -186,13 +258,18 @@ class BreadboardPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawHole(Canvas canvas, Offset offset) {
+  void _drawHole(Canvas canvas, Offset offset, {bool isHighlighted = false}) {
     const dotRadiusInner = 3.0;
     const dotRadiusOuter = 5.0;
 
     const halfCircleSweep = pi;
     const topHalfStart = pi;
     const bottomHalfStart = 0.0;
+
+    if (isHighlighted) {
+      _paint.color = Colors.green;
+      canvas.drawCircle(offset, dotRadiusOuter + 4, _paint);
+    }
 
     _paint.color = holeBevelLight;
     canvas.drawArc(

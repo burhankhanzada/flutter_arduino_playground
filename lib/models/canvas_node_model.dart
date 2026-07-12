@@ -10,6 +10,7 @@ class CanvasNodeModel {
   }) : key = key ?? UniqueKey();
 
   Offset position;
+  Offset? hoveredLocalPosition;
   final LocalKey key;
   final ComponentModel componentModel;
 
@@ -17,12 +18,15 @@ class CanvasNodeModel {
 
   CanvasNodeModel copyWith({
     Offset? position,
+    Offset? hoveredLocalPosition,
     ComponentModel? componentModel,
   }) {
-    return CanvasNodeModel(
+    final newNode = CanvasNodeModel(
       position: position ?? this.position,
       componentModel: componentModel ?? this.componentModel,
       key: key,
     );
+    newNode.hoveredLocalPosition = hoveredLocalPosition ?? this.hoveredLocalPosition;
+    return newNode;
   }
 }
