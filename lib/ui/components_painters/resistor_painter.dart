@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 
-class ResistorPainter extends CustomPainter {
+class ResistorPainter extends CustomPainter implements PortProvider {
   final _paint = Paint();
 
   static const double gridCellSize = GridSystem.cellSize;
@@ -17,6 +19,44 @@ class ResistorPainter extends CustomPainter {
   static const _bandWidth = 3.0;
 
   static const componentSize = Size(_width, _height);
+
+  @override
+  List<ComponentPort> getPorts() {
+    const centerY = _height / 2;
+    const leftLegX = gridCellCenter;
+    const rightLegX = _width - gridCellCenter;
+
+    return [
+      const ComponentPort(
+        id: 'left',
+        name: 'Left Leg',
+        localOffset: Offset(leftLegX, centerY),
+      ),
+      const ComponentPort(
+        id: 'right',
+        name: 'Right Leg',
+        localOffset: Offset(rightLegX, centerY),
+      ),
+    ];
+  }
+
+  @override
+  ComponentPort? getPortAt(Offset localOffset) {
+    for (final port in getPorts()) {
+      if ((port.localOffset - localOffset).distance < 15.0) {
+        return port;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Offset? getPortOffsetById(String id) {
+    for (final port in getPorts()) {
+      if (port.id == id) return port.localOffset;
+    }
+    return null;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {

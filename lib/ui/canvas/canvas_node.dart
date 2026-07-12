@@ -41,16 +41,19 @@ class CanvasNode extends StatelessWidget {
     final baseComponent = ComponentWidget(
       componentModel: node.componentModel,
       hoveredLocalPosition: node.hoveredLocalPosition,
+      breadboardHover: node.breadboardHover,
     );
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        if (isSelected) 
-           ..._generateSmoothOutline(baseComponent, primaryColor, 2.0),
-        
-        baseComponent,
-      ],
+    return RepaintBoundary(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (isSelected) 
+             ..._generateSmoothOutline(baseComponent, primaryColor, 2.0),
+          
+          baseComponent,
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
+import 'package:flutter_arduino_playground/models/port_model.dart';
+import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
 // Absolute state controller for high precision zoom/pan
@@ -59,4 +61,8 @@ class BaseCanvasController extends ChangeNotifier {
     _dragStartOffset = offset;
     notifyListeners();
   }
+
+  CanvasNodeModel? selectedNodeKey;
+  CanvasNodeModel? hoveredNodeKey;
+  PortLocation? hoveredPort;
 }

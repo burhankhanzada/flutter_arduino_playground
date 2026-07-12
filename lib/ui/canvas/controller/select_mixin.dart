@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
+import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/pan_mixin.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/breadebord_painter.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/logic/breadboard_hit_tester.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 
 mixin SelectMixin on BaseCanvasController {
-  CanvasNodeModel? selectedNodeKey;
-
   bool isSelected(Key key) {
     return selectedNodeKey != null && selectedNodeKey!.key == key;
+  }
+
+  bool isHovered(Key key) {
+    return hoveredNodeKey != null && hoveredNodeKey!.key == key;
   }
 
   void clearSelection() {
@@ -35,15 +41,39 @@ mixin SelectMixin on BaseCanvasController {
     bool changed = false;
 
     // Clear hover position for previous node if it changed
-    if (selectedNodeKey != found) {
-      selectedNodeKey?.hoveredLocalPosition = null;
-      selectedNodeKey = found;
+    if (hoveredNodeKey != found) {
+      hoveredNodeKey?.hoveredLocalPosition = null;
+      hoveredNodeKey?.breadboardHover = null;
+      hoveredNodeKey = found;
+      hoveredPort = null;
       changed = true;
     }
 
-    // Update hover position for current node
+    // Update hover position and port for current node
     if (found != null) {
       final localPos = canvasPosition - found.position;
+
+      // Update breadboard-specific hover
+      if (found.componentModel.painter is BreadboardPainter) {
+        final breadboardPainter = found.componentModel.painter as BreadboardPainter;
+        final newBreadboardHover = BreadboardHitTester.hitTest(localPos, breadboardPainter.config);
+        if (found.breadboardHover != newBreadboardHover) {
+          found.breadboardHover = newBreadboardHover;
+          changed = true;
+        }
+      }
+
+      // Update port hover
+      final painter = found.componentModel.painter;
+      if (painter is PortProvider) {
+        final newPort = (painter as PortProvider).getPortAt(localPos);
+        final newPortLoc = newPort != null ? PortLocation(nodeKey: found.key, portId: newPort.id) : null;
+        if (hoveredPort != newPortLoc) {
+          hoveredPort = newPortLoc;
+          changed = true;
+        }
+      }
+
       if (found.hoveredLocalPosition != localPos) {
         found.hoveredLocalPosition = localPos;
         changed = true;

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 
-class PushButtonPainter extends CustomPainter {
+class PushButtonPainter extends CustomPainter implements PortProvider {
   final Paint _paint = Paint();
 
   static const _bodySize = 50.0;
@@ -10,6 +12,42 @@ class PushButtonPainter extends CustomPainter {
   static const _height = _bodySize + _legsHeight;
 
   static const componentSize = Size(_bodySize, _height);
+
+  @override
+  List<ComponentPort> getPorts() {
+    final centerY = _height / 2;
+    const legHeight = _height - GridSystem.cellCenter * 2;
+    const leftLegX = GridSystem.cellCenter;
+    const rightLegX = _bodySize - GridSystem.cellCenter;
+
+    final topY = centerY - legHeight / 2;
+    final bottomY = centerY + legHeight / 2;
+
+    return [
+      ComponentPort(id: 'leg1', name: 'Leg 1', localOffset: Offset(leftLegX, topY)),
+      ComponentPort(id: 'leg2', name: 'Leg 2', localOffset: Offset(rightLegX, topY)),
+      ComponentPort(id: 'leg3', name: 'Leg 3', localOffset: Offset(leftLegX, bottomY)),
+      ComponentPort(id: 'leg4', name: 'Leg 4', localOffset: Offset(rightLegX, bottomY)),
+    ];
+  }
+
+  @override
+  ComponentPort? getPortAt(Offset localOffset) {
+    for (final port in getPorts()) {
+      if ((port.localOffset - localOffset).distance < 15.0) {
+        return port;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Offset? getPortOffsetById(String id) {
+    for (final port in getPorts()) {
+      if (port.id == id) return port.localOffset;
+    }
+    return null;
+  }
 
   @override
   void paint(Canvas canvas, Size size) {

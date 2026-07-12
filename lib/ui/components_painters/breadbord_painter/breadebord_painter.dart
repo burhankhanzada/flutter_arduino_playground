@@ -1,17 +1,106 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_arduino_playground/models/breadboard_interaction.dart';
+import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/breadboard_config.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/power_rail_config.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/terminal_strip_config.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/logic/breadboard_hit_tester.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class BreadboardPainter extends CustomPainter {
+class BreadboardPainter extends CustomPainter implements PortProvider {
   final BreadboardConfig config;
 
-  BreadboardPainter({required this.config});
+  final BreadboardHoverState? hoverState;
 
-  Offset? hoveredLocalPosition;
+  BreadboardPainter({required this.config, this.hoverState});
+
+  @override
+  List<ComponentPort> getPorts() => []; // Dynamic discovery used instead
+
+  @override
+  ComponentPort? getPortAt(Offset localOffset) {
+    final hover = BreadboardHitTester.hitTest(localOffset, config);
+    if (hover == null) return null;
+
+    final String side = hover.isRightSide ? 'right' : 'left';
+    String id;
+    String name;
+    Offset portOffset;
+
+    final rail = PowerRailConfig(config);
+
+    if (hover.channel == BreadboardChannel.plus || hover.channel == BreadboardChannel.minus) {
+      final isPlus = hover.channel == BreadboardChannel.plus;
+      // For rails, we need to know WHICH row specifically.
+      // Although BreadboardHoverState doesn't store the row for rails yet, 
+      // we can calculate it from localOffset.
+      final row = ((localOffset.dy - config.firstRowY) / config.gridCellStep).round();
+      if (row < 0 || row >= config.rowsCount) return null;
+
+      final channelName = isPlus ? 'plus' : 'minus';
+      id = 'rail_${side}_${channelName}_$row';
+      name = 'Power Rail $side ${channelName.toUpperCase()} Row ${row + 1}';
+      
+      final x = isPlus ? rail.dot1Offset : rail.dot2Offset;
+      final y = config.firstRowY + row * config.gridCellStep;
+      portOffset = Offset(x, y);
+    } else {
+      final row = hover.rowIndex!;
+      // Find exact column based on localX
+      // Left section starts at config.leftSectionStartOffset
+      // Right section starts at config.rightSectionStartOffset
+      final double sectionStartX = hover.isRightSide ? config.rightSectionStartOffset : config.leftSectionStartOffset;
+      final localX = localOffset.dx - sectionStartX;
+      final col = (localX / config.gridCellStep).round();
+      if (col < 0 || col >= 5) return null;
+
+      final section = hover.isRightSide ? TerminalStripConfig.right(config) : TerminalStripConfig.left(config);
+      final colName = section.columnLabels[col];
+      
+      id = 'sig_${side}_${colName}_$row';
+      name = 'Signal $side ${colName.toUpperCase()} Row ${row + 1}';
+      portOffset = Offset(sectionStartX + col * config.gridCellStep, config.firstRowY + row * config.gridCellStep);
+    }
+
+    return ComponentPort(id: id, name: name, localOffset: portOffset);
+  }
+
+  @override
+  Offset? getPortOffsetById(String id) {
+    if (id.startsWith('rail_')) {
+      final parts = id.split('_');
+      if (parts.length < 4) return null;
+      // final side = parts[1];
+      final channel = parts[2] == 'plus' ? BreadboardChannel.plus : BreadboardChannel.minus;
+      final row = int.tryParse(parts[3]) ?? 0;
+
+      final rail = PowerRailConfig(config);
+      final isPlus = channel == BreadboardChannel.plus;
+      final x = isPlus ? rail.dot1Offset : rail.dot2Offset;
+      final y = config.firstRowY + row * config.gridCellStep;
+      return Offset(x, y);
+    } else if (id.startsWith('sig_')) {
+      final parts = id.split('_');
+      if (parts.length < 4) return null;
+      final isRightSide = parts[1] == 'right';
+      final colName = parts[2];
+      final row = int.tryParse(parts[3]) ?? 0;
+
+      final section =
+          isRightSide ? TerminalStripConfig.right(config) : TerminalStripConfig.left(config);
+      final colIndex = section.columnLabels.indexOf(colName);
+      if (colIndex == -1) return null;
+
+      final double sectionStartX =
+          isRightSide ? config.rightSectionStartOffset : config.leftSectionStartOffset;
+      return Offset(sectionStartX + colIndex * config.gridCellStep,
+          config.firstRowY + row * config.gridCellStep);
+    }
+    return null;
+  }
 
   final _paint = Paint();
 
@@ -30,7 +119,7 @@ class BreadboardPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant BreadboardPainter oldDelegate) =>
       config != oldDelegate.config ||
-      hoveredLocalPosition != oldDelegate.hoveredLocalPosition;
+      hoverState != oldDelegate.hoverState;
 
   void _drawBackground(Canvas canvas, Size size) {
     _paint.color = backgroundColor;
@@ -118,27 +207,14 @@ class BreadboardPainter extends CustomPainter {
       _paint,
     );
 
-    final double hitRadius = config.gridCellSize * 0.8;
-    final double baseOffsetX = isRight ? config.rightPowerRailOffset : config.boardPadding;
-
     bool isColumn1Highlighted = false;
     bool isColumn2Highlighted = false;
 
-    if (hoveredLocalPosition != null) {
-      final localX = hoveredLocalPosition!.dx - baseOffsetX;
-      final localY = hoveredLocalPosition!.dy;
-
-      // Check if mouse is over any hole in this rail's column 1
-      if ((localX - rail.dot1Offset).abs() < hitRadius) {
-        if (localY >= config.firstRowY - hitRadius && localY <= config.lastRowY + hitRadius) {
-          isColumn1Highlighted = true;
-        }
-      }
-      // Check if mouse is over any hole in this rail's column 2
-      if ((localX - rail.dot2Offset).abs() < hitRadius) {
-        if (localY >= config.firstRowY - hitRadius && localY <= config.lastRowY + hitRadius) {
-          isColumn2Highlighted = true;
-        }
+    if (hoverState != null && hoverState!.isRightSide == isRight) {
+      if (hoverState!.channel == BreadboardChannel.plus) {
+        isColumn1Highlighted = true;
+      } else if (hoverState!.channel == BreadboardChannel.minus) {
+        isColumn2Highlighted = true;
       }
     }
 
@@ -146,8 +222,8 @@ class BreadboardPainter extends CustomPainter {
     canvas.translate(0, config.firstRowY);
 
     if (isColumn1Highlighted || isColumn2Highlighted) {
-      _applyStrokePaint(color: Colors.green, width: 2.0, cap: StrokeCap.round);
       if (isColumn1Highlighted) {
+        _applyStrokePaint(color: rail.plusColor, width: 2.0, cap: StrokeCap.round);
         canvas.drawLine(
           Offset(rail.dot1Offset, 0),
           Offset(rail.dot1Offset, (config.rowsCount - 1) * config.gridCellStep),
@@ -155,6 +231,7 @@ class BreadboardPainter extends CustomPainter {
         );
       }
       if (isColumn2Highlighted) {
+        _applyStrokePaint(color: rail.minusColor, width: 2.0, cap: StrokeCap.round);
         canvas.drawLine(
           Offset(rail.dot2Offset, 0),
           Offset(rail.dot2Offset, (config.rowsCount - 1) * config.gridCellStep),
@@ -165,8 +242,18 @@ class BreadboardPainter extends CustomPainter {
 
     for (int row = 0; row < config.rowsCount; row++) {
       final double y = row * config.gridCellStep;
-      _drawHole(canvas, Offset(rail.dot1Offset, y), isHighlighted: isColumn1Highlighted);
-      _drawHole(canvas, Offset(rail.dot2Offset, y), isHighlighted: isColumn2Highlighted);
+      _drawHole(
+        canvas,
+        Offset(rail.dot1Offset, y),
+        isHighlighted: isColumn1Highlighted,
+        highlightColor: rail.plusColor,
+      );
+      _drawHole(
+        canvas,
+        Offset(rail.dot2Offset, y),
+        isHighlighted: isColumn2Highlighted,
+        highlightColor: rail.minusColor,
+      );
     }
     canvas.restore();
   }
@@ -179,21 +266,12 @@ class BreadboardPainter extends CustomPainter {
 
   void _drawSignalDots(Canvas canvas, TerminalStripConfig section, {required double sectionOffsetX}) {
     int? highlightedRow;
-    final double hitRadius = config.gridCellSize * 0.8;
+    final bool isRight = sectionOffsetX == config.rightSectionStartOffset;
 
-    if (hoveredLocalPosition != null) {
-      final localX = hoveredLocalPosition!.dx - sectionOffsetX;
-      final localY = hoveredLocalPosition!.dy - config.firstRowY;
-
-      if (localX >= -hitRadius && localX <= (section.columnLabels.length - 1) * config.gridCellStep + hitRadius) {
-        final rowDouble = localY / config.gridCellStep;
-        final row = rowDouble.round();
-        if ((localY - row * config.gridCellStep).abs() < hitRadius &&
-            row >= 0 &&
-            row < config.rowsCount) {
-          highlightedRow = row;
-        }
-      }
+    if (hoverState != null &&
+        hoverState!.channel == BreadboardChannel.signal &&
+        hoverState!.isRightSide == isRight) {
+      highlightedRow = hoverState!.rowIndex;
     }
 
     canvas.save();
@@ -258,7 +336,12 @@ class BreadboardPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawHole(Canvas canvas, Offset offset, {bool isHighlighted = false}) {
+  void _drawHole(
+    Canvas canvas,
+    Offset offset, {
+    bool isHighlighted = false,
+    Color highlightColor = Colors.green,
+  }) {
     const dotRadiusInner = 3.0;
     const dotRadiusOuter = 5.0;
 
@@ -267,7 +350,7 @@ class BreadboardPainter extends CustomPainter {
     const bottomHalfStart = 0.0;
 
     if (isHighlighted) {
-      _paint.color = Colors.green;
+      _paint.color = highlightColor;
       canvas.drawCircle(offset, dotRadiusOuter + 4, _paint);
     }
 

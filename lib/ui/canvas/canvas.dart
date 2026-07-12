@@ -5,6 +5,7 @@ import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart'
 import 'package:flutter_arduino_playground/ui/canvas/grid_painter.dart';
 import 'package:flutter_arduino_playground/ui/canvas/keybaord_event.dart';
 import 'package:flutter_arduino_playground/ui/canvas/pointer_event.dart';
+import 'package:flutter_arduino_playground/ui/canvas/wire_painter.dart';
 
 class Canvas extends StatefulWidget {
   const Canvas({super.key, required this.controller});
@@ -72,24 +73,40 @@ class CanvasState extends State<Canvas> {
                 ),
                 Transform(
                   transform: controller.transform,
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: double.infinity,
-                    child: CustomMultiChildLayout(
-                      delegate: InfiniteCanvasNodesDelegate(controller.nodes),
-                      children: controller.nodes
-                          .map(
-                            (canvasComponentModel) => LayoutId(
-                              id: canvasComponentModel,
-                              key: canvasComponentModel.key,
-                              child: CanvasNode(
-                                controller: controller,
-                                node: canvasComponentModel,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        height: double.infinity,
+                        child: CustomMultiChildLayout(
+                          delegate: InfiniteCanvasNodesDelegate(controller.nodes),
+                          children: controller.nodes
+                              .map(
+                                (canvasComponentModel) => LayoutId(
+                                  id: canvasComponentModel,
+                                  key: canvasComponentModel.key,
+                                  child: CanvasNode(
+                                    controller: controller,
+                                    node: canvasComponentModel,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      IgnorePointer(
+                        child: CustomPaint(
+                          size: Size.infinite,
+                          painter: WirePainter(
+                            wires: List.of(controller.wires),
+                            nodes: List.of(controller.nodes),
+                            pendingStart: controller.startPort,
+                            pendingEndMouse: controller.currentDragPosition,
+                            hoveredPort: controller.hoveredPort,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

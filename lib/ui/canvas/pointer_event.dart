@@ -78,10 +78,25 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
 
   void onPointerMove(PointerMoveEvent event) {
     controller.mouseLocalPosition = event.localPosition;
-    controller.moveSelection(event.delta);
+    final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
+
+    if (controller.isWiring) {
+      controller.checkHover();
+      controller.updateWiring(canvasPos);
+    } else {
+      controller.moveSelection(event.delta);
+    }
   }
 
   void onPointerUp(PointerUpEvent event) {
+    if (controller.isWiring) {
+      if (controller.hoveredPort != null) {
+        controller.completeWiring(controller.hoveredPort!);
+      } else {
+        controller.cancelWiring();
+      }
+    }
+
     controller.mouseDown = false;
     controller.dragStartOffset = null;
   }
@@ -89,6 +104,12 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   void onPointerDown(PointerDownEvent event) {
     controller.mouseDown = true;
     controller.mouseLocalPosition = event.localPosition;
-    controller.checkSelection();
+
+    if (controller.hoveredPort != null) {
+      final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
+      controller.startWiring(controller.hoveredPort!, canvasPos);
+    } else {
+      controller.checkSelection();
+    }
   }
 }
