@@ -115,6 +115,7 @@ class CanvasState extends State<Canvas> {
                             hoveredWireId: controller.hoveredWireId,
                             selectedWireId: controller.selectedWireId,
                             selectionColor: Theme.of(context).colorScheme.primary,
+                            pendingColor: controller.activeDragColor ?? Colors.yellow,
                           ),
                         ),
                       ),
@@ -137,7 +138,7 @@ class InfiniteCanvasNodesDelegate extends MultiChildLayoutDelegate {
   @override
   void performLayout(Size size) {
     for (final widget in nodes) {
-      layoutChild(widget, BoxConstraints.tight(widget.componentModel.size));
+      layoutChild(widget, BoxConstraints.tight(widget.currentSize));
       positionChild(widget, widget.position);
     }
   }

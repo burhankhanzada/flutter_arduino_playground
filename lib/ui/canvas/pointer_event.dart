@@ -22,6 +22,7 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   bool _isDraggingDuringWiring = false;
   Offset? _startDownPos;
   int _lastClickTime = 0;
+  bool _hasSavedHistoryForDrag = false;
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +57,16 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
       controller.checkHover();
       controller.updateWiring(canvasPos);
     } else if (controller.isDraggingBendPoint) {
+      if (!_hasSavedHistoryForDrag) {
+        controller.saveHistory();
+        _hasSavedHistoryForDrag = true;
+      }
       controller.updateDraggingBendPoint(canvasPos);
     } else {
+      if (controller.selectedNodeKey != null && !_hasSavedHistoryForDrag && _startDownPos != null && (event.localPosition - _startDownPos!).distance > 2) {
+        controller.saveHistory();
+        _hasSavedHistoryForDrag = true;
+      }
       controller.moveSelection(event.delta);
     }
   }
@@ -78,11 +87,13 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   }
 
   void onPointerDown(PointerDownEvent event) {
+    FocusScope.of(context).requestFocus();
     controller.mouseDown = true;
     controller.mouseLocalPosition = event.localPosition;
     final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
     _startDownPos = event.localPosition;
     _isDraggingDuringWiring = false;
+    _hasSavedHistoryForDrag = false;
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final isDoubleClick = (now - _lastClickTime < 300);

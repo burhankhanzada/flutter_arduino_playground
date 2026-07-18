@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
+import 'dart:math' as math;
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
@@ -28,16 +29,7 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
     // Convert screen coordinates to canvas coordinates
     final canvasPosition = screenToCanvasCoordinates(mouseLocalPosition);
     
-    // 1. Check wire interaction first (highest priority)
-    final hitWire = checkWireInteraction(canvasPosition);
-
-    // 2. Clear node hover if we hit a wire (optional, but prevents double hover)
-    // Actually, we want to allow pin highlighting even if over a wire? 
-    // Usually, wire takes precedence for interaction.
-    
     CanvasNodeModel? found;
-    // Only check node hover if we didn't hit a wire OR we want both
-    // For now, let's allowed both but prioritize wire for selection logic
     for (final node in nodes.reversed) {
       if (node.rect.contains(canvasPosition)) {
         found = node;
@@ -56,9 +48,36 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
       changed = true;
     }
 
+    bool hitPort = false;
+
     // Update hover position and port for current node
-    if (found != null && !hitWire) { // Only update node-specific hover (like pins) if not over a wire
-      final localPos = canvasPosition - found.position;
+    if (found != null) {
+      final rotatedLocalPos = canvasPosition - found.position;
+
+      // Unrotate the local position to match the unrotated component painters
+      final w = found.componentModel.size.width;
+      final h = found.componentModel.size.height;
+      
+      // Translate rotatedLocalPos to bounding box center
+      final dx = rotatedLocalPos.dx - found.pivotOffset.dx;
+      final dy = rotatedLocalPos.dy - found.pivotOffset.dy;
+      
+      // Inverse rotate (by -rotationAngle)
+      final angle = found.rotationAngle;
+      final c = math.cos(-angle);
+      final s = math.sin(-angle);
+      final rx = dx * c - dy * s;
+      final ry = dx * s + dy * c;
+      
+      // Translate back to unrotated component top-left (pivot was topCenter)
+      var localX = rx + w / 2;
+      var localY = ry;
+      
+      // Un-flip
+      if (found.flipHorizontal) localX = w - localX;
+      if (found.flipVertical) localY = h - localY;
+      
+      Offset localPos = Offset(localX, localY);
 
       // Update breadboard-specific hover
       if (found.componentModel.painter is BreadboardPainter) {
@@ -85,11 +104,20 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
         found.hoveredLocalPosition = localPos;
         changed = true;
       }
-    } else if (found != null && hitWire) {
-      // If hitting a wire over a node, clear the node's internal hover state (like pins)
-      if (found.breadboardHover != null || hoveredPort != null) {
-        found.breadboardHover = null;
-        hoveredPort = null;
+      
+      if (hoveredPort != null) {
+        hitPort = true;
+      }
+    }
+
+    // Now check wire interaction, but IF we hit a port, port takes priority!
+    bool hitWire = false;
+    if (!hitPort) {
+      hitWire = checkWireInteraction(canvasPosition);
+    } else {
+      // Clear wire hover if we hit a port
+      if (hoveredWireId != null) {
+        hoveredWireId = null;
         changed = true;
       }
     }
@@ -107,6 +135,7 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
     final hitWire = checkWireInteraction(canvasPosition);
     if (hitWire && hoveredWireId != null) {
       selectWire(hoveredWireId);
+      clearSelection();
       return;
     }
 

@@ -7,15 +7,26 @@ class ComponentPalette extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card.outlined(
-      child: SizedBox(
-        width: 250,
-        child: ListView.builder(
-          itemCount: components.length,
-          itemBuilder: (context, index) {
-            return PaletteComponent(componentModel: components[index]);
-          },
-        ),
+    return SizedBox(
+      width: 300,
+      child: Column(
+        children: [
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.6,
+              ),
+              itemCount: components.length,
+              itemBuilder: (context, index) {
+                return PaletteComponent(componentModel: components[index]);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

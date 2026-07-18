@@ -45,14 +45,35 @@ class CanvasNode extends StatelessWidget {
     );
 
     return RepaintBoundary(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isSelected) 
-             ..._generateSmoothOutline(baseComponent, primaryColor, 2.0),
-          
-          baseComponent,
-        ],
+      child: SizedBox(
+        width: node.currentSize.width,
+        height: node.currentSize.height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: node.pivotOffset.dx - node.componentModel.size.width / 2,
+              top: node.pivotOffset.dy,
+              child: Transform.rotate(
+                angle: node.rotationAngle,
+                alignment: Alignment.topCenter,
+                child: Transform.scale(
+                  scaleX: node.flipHorizontal ? -1 : 1,
+                  scaleY: node.flipVertical ? -1 : 1,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      if (isSelected) 
+                         ..._generateSmoothOutline(baseComponent, primaryColor, 2.0),
+                      
+                      baseComponent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

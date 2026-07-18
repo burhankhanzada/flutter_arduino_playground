@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
@@ -11,11 +12,33 @@ mixin ConnectionMixin on BaseCanvasController {
   // Transient state for the wire being dragged
   PortLocation? startPort;
   Offset? currentDragPosition;
-  Color currentWireColor = Colors.yellow;
+  Color? currentWireColor; // null means Auto
+  Color? activeDragColor; // Holds the assigned random or current color during dragging
 
   // Interaction state
   String? hoveredWireId;
   String? selectedWireId;
+
+  void updateWireColor(Color? newColor) {
+    currentWireColor = newColor;
+    if (newColor != null && selectedWireId != null) {
+       final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
+       if (wireIndex != -1) {
+         final wire = wires[wireIndex];
+         wires[wireIndex] = wire.copyWith(color: newColor);
+       }
+    }
+    notifyListeners();
+  }
+
+  Color _getRandomColor() {
+    final availableColors = [
+      Colors.black, Colors.red, Colors.orange, Colors.amber, Colors.yellow,
+      Colors.lime, Colors.green, Colors.teal, Colors.cyan, Colors.blue,
+      Colors.indigo, Colors.purple, Colors.pink, Colors.brown, Colors.grey, Colors.white,
+    ];
+    return availableColors[Random().nextInt(availableColors.length)];
+  }
   
   // State for dragging a bend point or segment
   String? draggingWireId;
@@ -27,8 +50,10 @@ mixin ConnectionMixin on BaseCanvasController {
   bool get isDraggingBendPoint => draggingWireId != null && (draggingBendPointIndex != null || isDraggingSegment);
 
   void startWiring(PortLocation port, Offset initialPosition) {
+    selectedWireId = null;
     startPort = port;
     currentDragPosition = initialPosition;
+    activeDragColor = currentWireColor ?? _getRandomColor();
     notifyListeners();
   }
 
@@ -52,7 +77,7 @@ mixin ConnectionMixin on BaseCanvasController {
       start: startPort!,
       end: endPort,
       bendPoints: [], // New wires start as straight lines
-      color: currentWireColor,
+      color: activeDragColor ?? Colors.yellow,
     );
 
     wires.add(newWire);
@@ -62,6 +87,7 @@ mixin ConnectionMixin on BaseCanvasController {
   void cancelWiring() {
     startPort = null;
     currentDragPosition = null;
+    activeDragColor = null;
     notifyListeners();
   }
 

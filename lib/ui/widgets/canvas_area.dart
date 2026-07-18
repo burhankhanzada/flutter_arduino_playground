@@ -6,14 +6,15 @@ import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart'
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 class CanvasArea extends StatefulWidget {
-  const CanvasArea({super.key});
+  final CanvasController controller;
+  const CanvasArea({super.key, required this.controller});
 
   @override
   State<CanvasArea> createState() => _CanvasAreaState();
 }
 
 class _CanvasAreaState extends State<CanvasArea> {
-  final controller = CanvasController();
+  CanvasController get controller => widget.controller;
 
   @override
   Widget build(BuildContext context) {

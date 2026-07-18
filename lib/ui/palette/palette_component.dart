@@ -10,26 +10,31 @@ class PaletteComponent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
       padding: const EdgeInsets.all(8),
-      child: Column(
-        spacing: 8,
-        children: [
-          DragItemWidget(
-            allowedOperations: () => [DropOperation.copy],
-            dragItemProvider: (request) => DragItem(
-              localData: componentModel.name,
-              suggestedName: componentModel.name,
-            )..add(Formats.plainText(componentModel.name)),
-            child: DraggableWidget(
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: ComponentWidget(componentModel: componentModel),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: DragItemWidget(
+        allowedOperations: () => [DropOperation.copy],
+        dragItemProvider: (request) => DragItem(
+          localData: componentModel.name,
+          suggestedName: componentModel.name,
+        )..add(Formats.plainText(componentModel.name)),
+        child: DraggableWidget(
+          child: Column(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: ComponentWidget(componentModel: componentModel),
+                ),
               ),
-            ),
+              Text(componentModel.name, textAlign: TextAlign.center),
+            ],
           ),
-          Text(componentModel.name),
-        ],
+        ),
       ),
     );
   }
