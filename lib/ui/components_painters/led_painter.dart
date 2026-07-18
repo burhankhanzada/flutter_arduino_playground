@@ -3,7 +3,7 @@ import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 
-class LEDPainter extends CustomPainter implements PortProvider {
+class LEDPainter extends CustomPainter with PortProvider {
   final _paint = Paint();
 
   static const _bodyHeight = 40.0;
@@ -16,7 +16,6 @@ class LEDPainter extends CustomPainter implements PortProvider {
 
   @override
   List<ComponentPort> getPorts() {
-    const startY = _bodyHeight - 2.0;
     const endY = _height - GridSystem.cellCenter;
     const leftLegX = GridSystem.cellCenter;
     const rightLegX = _width - GridSystem.cellCenter;
@@ -33,24 +32,6 @@ class LEDPainter extends CustomPainter implements PortProvider {
         localOffset: Offset(rightLegX, endY),
       ),
     ];
-  }
-
-  @override
-  ComponentPort? getPortAt(Offset localOffset) {
-    for (final port in getPorts()) {
-      if ((port.localOffset - localOffset).distance < 15.0) {
-        return port;
-      }
-    }
-    return null;
-  }
-
-  @override
-  Offset? getPortOffsetById(String id) {
-    for (final port in getPorts()) {
-      if (port.id == id) return port.localOffset;
-    }
-    return null;
   }
 
   @override

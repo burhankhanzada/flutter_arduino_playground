@@ -10,17 +10,20 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final double s = controller.scale;
-    final Offset o = controller.offset;
 
-    // Get visible bounds in canvas space (Simplified arithmetic)
-    final double left = (0 - o.dx) / s - 100;
-    final double top = (0 - o.dy) / s - 100;
-    final double right = (size.width - o.dx) / s + 100;
-    final double bottom = (size.height - o.dy) / s + 100;
+    // Get visible bounds in canvas space by mapping screen corners
+    final Offset p1 = controller.screenToCanvasCoordinates(Offset.zero);
+    final Offset p2 = controller.screenToCanvasCoordinates(Offset(size.width, 0));
+    final Offset p3 = controller.screenToCanvasCoordinates(Offset(0, size.height));
+    final Offset p4 = controller.screenToCanvasCoordinates(Offset(size.width, size.height));
+
+    final double left = [p1.dx, p2.dx, p3.dx, p4.dx].reduce((a, b) => a < b ? a : b) - 100;
+    final double right = [p1.dx, p2.dx, p3.dx, p4.dx].reduce((a, b) => a > b ? a : b) + 100;
+    final double top = [p1.dy, p2.dy, p3.dy, p4.dy].reduce((a, b) => a < b ? a : b) - 100;
+    final double bottom = [p1.dy, p2.dy, p3.dy, p4.dy].reduce((a, b) => a > b ? a : b) + 100;
 
     canvas.save();
-    canvas.translate(o.dx, o.dy);
-    canvas.scale(s, s);
+    canvas.transform(controller.transform.storage);
 
     final double baseStep = controller.gridCellSize;
 
@@ -42,7 +45,7 @@ class GridPainter extends CustomPainter {
       }
       
       // Use the hierarchical color directly with the adaptive opacity
-      final Color finalColor = customColor.withOpacity(opacity * 0.4);
+      final Color finalColor = customColor.withValues(alpha: opacity * 0.4);
 
       // 3. Scale-Inverse Thickness
       final double thickness = (baseWidth / s).clamp(0.6 / s, 5.0 / s);

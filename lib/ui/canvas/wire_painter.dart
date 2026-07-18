@@ -9,7 +9,10 @@ class WirePainter extends CustomPainter {
   final PortLocation? pendingStart;
   final Offset? pendingEndMouse;
   final PortLocation? hoveredPort;
+  final String? hoveredWireId;
+  final String? selectedWireId;
   final Color pendingColor;
+  final Color selectionColor;
 
   WirePainter({
     required this.wires,
@@ -17,6 +20,9 @@ class WirePainter extends CustomPainter {
     this.pendingStart,
     this.pendingEndMouse,
     this.hoveredPort,
+    this.hoveredWireId,
+    this.selectedWireId,
+    this.selectionColor = Colors.blue,
     this.pendingColor = Colors.yellow,
   });
 
@@ -33,8 +39,28 @@ class WirePainter extends CustomPainter {
       final endPos = _getPortPosition(wire.end);
 
       if (startPos != null && endPos != null) {
+        final isHovered = wire.id == hoveredWireId;
+        final isSelected = wire.id == selectedWireId;
+
         paint.color = wire.color;
-        _drawBezierCurve(canvas, startPos, endPos, paint);
+        if (isSelected || isHovered) {
+          paint.strokeWidth = 4.0;
+        } else {
+          paint.strokeWidth = 3.0;
+        }
+
+        _drawPolyline(
+          canvas,
+          startPos,
+          endPos,
+          wire.bendPoints,
+          paint,
+          isSelected || isHovered,
+        );
+
+        if (isSelected) {
+          _drawHandles(canvas, startPos, endPos, wire.bendPoints, wire.color);
+        }
       }
     }
 
@@ -42,8 +68,9 @@ class WirePainter extends CustomPainter {
     if (pendingStart != null && pendingEndMouse != null) {
       final startPos = _getPortPosition(pendingStart!);
       if (startPos != null) {
-        paint.color = pendingColor.withOpacity(0.7);
-        _drawBezierCurve(canvas, startPos, pendingEndMouse!, paint);
+        paint.color = pendingColor.withValues(alpha: 0.7);
+        paint.strokeWidth = 3.0;
+        _drawPolyline(canvas, startPos, pendingEndMouse!, [], paint, false);
       }
     }
 
@@ -52,11 +79,11 @@ class WirePainter extends CustomPainter {
       final portPos = _getPortPosition(hoveredPort!);
       if (portPos != null) {
         final glowPaint = Paint()
-          ..color = Colors.white.withOpacity(0.5)
+          ..color = Colors.white.withValues(alpha: 0.5)
           ..style = PaintingStyle.fill
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
         canvas.drawCircle(portPos, 8, glowPaint);
-        
+
         final borderPaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.stroke
@@ -77,36 +104,101 @@ class WirePainter extends CustomPainter {
     }
   }
 
-  void _drawBezierCurve(Canvas canvas, Offset start, Offset end, Paint paint) {
+  void _drawPolyline(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    List<Offset> bendPoints,
+    Paint paint,
+    bool highlighted,
+  ) {
+    if (bendPoints.isEmpty) {
+      canvas.drawLine(start, end, paint);
+      if (highlighted) {
+        final outlinePaint = Paint()
+          ..color = selectionColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = paint.strokeWidth + 4
+          ..strokeCap = StrokeCap.round;
+        canvas.drawLine(start, end, outlinePaint);
+        // Draw the wire again on top of the outline
+        canvas.drawLine(start, end, paint);
+      }
+      return;
+    }
+
     final path = Path();
-    path.moveTo(start.dx, start.dy);
+    final allPoints = [start, ...bendPoints, end];
+    const double preferredRadius = 12.0;
 
-    // Control points biased horizontally
-    final double dist = (end - start).distance;
-    final double hControl = (dist * 0.4).clamp(10.0, 150.0);
+    path.moveTo(allPoints[0].dx, allPoints[0].dy);
 
-    path.cubicTo(
-      start.dx + hControl,
-      start.dy,
-      end.dx - hControl,
-      end.dy,
-      end.dx,
-      end.dy,
-    );
+    for (int i = 1; i < allPoints.length - 1; i++) {
+      final prev = allPoints[i - 1];
+      final curr = allPoints[i];
+      final next = allPoints[i + 1];
 
-    // Draw glow effect if selected/hovered (simple version for now)
-    final shadowPaint = Paint()
-      ..color = paint.color.withOpacity(0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = paint.strokeWidth + 4
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
-    
-    canvas.drawPath(path, shadowPaint);
+      // Calculate segments
+      final vPrev = prev - curr;
+      final vNext = next - curr;
+
+      final dPrev = vPrev.distance;
+      final dNext = vNext.distance;
+
+      // Determine radius (clamp if segment is too short)
+      double radius = preferredRadius;
+      if (dPrev < radius * 2) radius = dPrev / 2;
+      if (dNext < radius * 2) radius = dNext / 2;
+
+      // Entry/Exit points for the corner
+      final entry = curr + (vPrev / dPrev) * radius;
+      final exit = curr + (vNext / dNext) * radius;
+
+      // Draw line to start of corner, then curve
+      path.lineTo(entry.dx, entry.dy);
+      path.quadraticBezierTo(curr.dx, curr.dy, exit.dx, exit.dy);
+    }
+
+    path.lineTo(allPoints.last.dx, allPoints.last.dy);
+
+    if (highlighted) {
+      final outlinePaint = Paint()
+        ..color = selectionColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = paint.strokeWidth + 4
+        ..strokeCap = StrokeCap.round;
+      canvas.drawPath(path, outlinePaint);
+    }
+
     canvas.drawPath(path, paint);
+  }
+
+  void _drawHandles(
+    Canvas canvas,
+    Offset start,
+    Offset end,
+    List<Offset> bendPoints,
+    Color color,
+  ) {
+    final handlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    // Draw all handles (including endpoints) identically
+    final allPoints = [start, ...bendPoints, end];
+    for (final point in allPoints) {
+      canvas.drawCircle(point, 3.5, handlePaint);
+      canvas.drawCircle(point, 3.5, borderPaint);
+    }
   }
 
   @override
   bool shouldRepaint(covariant WirePainter oldDelegate) {
-    return true; // Simple for now to ensure smooth drag
+    return true;
   }
 }

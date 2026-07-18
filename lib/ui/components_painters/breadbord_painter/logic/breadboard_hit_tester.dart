@@ -8,7 +8,6 @@ class BreadboardHitTester {
   static BreadboardHoverState? hitTest(Offset localPosition, BreadboardConfig config) {
     // 1. Check Power Rails
     final rail = PowerRailConfig(config);
-    final double hitRadius = config.gridCellSize * 0.8;
 
     // Left Power Rail
     final leftRailResult = _testPowerRail(localPosition, config, rail, isRight: false);

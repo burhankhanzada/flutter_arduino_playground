@@ -6,6 +6,7 @@ import 'package:flutter_arduino_playground/ui/canvas/grid_painter.dart';
 import 'package:flutter_arduino_playground/ui/canvas/keybaord_event.dart';
 import 'package:flutter_arduino_playground/ui/canvas/pointer_event.dart';
 import 'package:flutter_arduino_playground/ui/canvas/wire_painter.dart';
+import 'package:interactive_viewer_plus/interactive_viewer_plus.dart';
 
 class Canvas extends StatefulWidget {
   const Canvas({super.key, required this.controller});
@@ -71,9 +72,17 @@ class CanvasState extends State<Canvas> {
                   size: Size.infinite,
                   painter: GridPainter(context, controller),
                 ),
-                Transform(
-                  transform: controller.transform,
+                InteractiveViewerPlus(
+                  controller: controller.viewerController,
+                  constrained: true,
+                  boundaryMargin: const EdgeInsets.all(double.infinity),
+                  minScale: controller.minScale,
+                  maxScale: controller.maxScale,
+                  panEnabled: controller.canvasMoveEnabled,
+                  scaleEnabled: true,
+                  clipBehavior: Clip.none,
                   child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
                       SizedBox(
                         width: double.infinity,
@@ -103,6 +112,9 @@ class CanvasState extends State<Canvas> {
                             pendingStart: controller.startPort,
                             pendingEndMouse: controller.currentDragPosition,
                             hoveredPort: controller.hoveredPort,
+                            hoveredWireId: controller.hoveredWireId,
+                            selectedWireId: controller.selectedWireId,
+                            selectionColor: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),

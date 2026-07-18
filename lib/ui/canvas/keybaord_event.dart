@@ -36,6 +36,9 @@ class KeyboardEvent extends StatelessWidget {
         _handleDelete(context),
     const SingleActivator(LogicalKeyboardKey.backspace): () =>
         _handleDelete(context),
+
+    // Cancel Wiring
+    const SingleActivator(LogicalKeyboardKey.escape): controller.cancelWiring,
   };
 
   Future<void> _handleDelete(BuildContext context) async {

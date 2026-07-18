@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
-import 'package:flutter_arduino_playground/ui/canvas/controller/pan_mixin.dart';
+import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/breadebord_painter.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/logic/breadboard_hit_tester.dart';
 import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
 
-mixin SelectMixin on BaseCanvasController {
+mixin SelectMixin on BaseCanvasController, ConnectionMixin {
   bool isSelected(Key key) {
     return selectedNodeKey != null && selectedNodeKey!.key == key;
   }
@@ -25,12 +25,19 @@ mixin SelectMixin on BaseCanvasController {
   }
 
   void checkHover() {
-    CanvasNodeModel? found;
-
     // Convert screen coordinates to canvas coordinates
     final canvasPosition = screenToCanvasCoordinates(mouseLocalPosition);
+    
+    // 1. Check wire interaction first (highest priority)
+    final hitWire = checkWireInteraction(canvasPosition);
 
-    // Find the topmost node at this position
+    // 2. Clear node hover if we hit a wire (optional, but prevents double hover)
+    // Actually, we want to allow pin highlighting even if over a wire? 
+    // Usually, wire takes precedence for interaction.
+    
+    CanvasNodeModel? found;
+    // Only check node hover if we didn't hit a wire OR we want both
+    // For now, let's allowed both but prioritize wire for selection logic
     for (final node in nodes.reversed) {
       if (node.rect.contains(canvasPosition)) {
         found = node;
@@ -40,7 +47,7 @@ mixin SelectMixin on BaseCanvasController {
 
     bool changed = false;
 
-    // Clear hover position for previous node if it changed
+    // Clear hover status for previous node if it changed
     if (hoveredNodeKey != found) {
       hoveredNodeKey?.hoveredLocalPosition = null;
       hoveredNodeKey?.breadboardHover = null;
@@ -50,7 +57,7 @@ mixin SelectMixin on BaseCanvasController {
     }
 
     // Update hover position and port for current node
-    if (found != null) {
+    if (found != null && !hitWire) { // Only update node-specific hover (like pins) if not over a wire
       final localPos = canvasPosition - found.position;
 
       // Update breadboard-specific hover
@@ -78,20 +85,33 @@ mixin SelectMixin on BaseCanvasController {
         found.hoveredLocalPosition = localPos;
         changed = true;
       }
+    } else if (found != null && hitWire) {
+      // If hitting a wire over a node, clear the node's internal hover state (like pins)
+      if (found.breadboardHover != null || hoveredPort != null) {
+        found.breadboardHover = null;
+        hoveredPort = null;
+        changed = true;
+      }
     }
 
-    if (changed) {
+    if (changed || hitWire) {
       notifyListeners();
     }
   }
 
   void checkSelection() {
-    CanvasNodeModel? found;
-
     // Convert screen coordinates to canvas coordinates
     final canvasPosition = screenToCanvasCoordinates(mouseLocalPosition);
 
-    // Find the topmost node at this position
+    // 1. Priority Selection: Check if we are clicking a wire (even if it's over a node)
+    final hitWire = checkWireInteraction(canvasPosition);
+    if (hitWire && hoveredWireId != null) {
+      selectWire(hoveredWireId);
+      return;
+    }
+
+    // 2. Node Selection
+    CanvasNodeModel? found;
     for (final node in nodes.reversed) {
       if (node.rect.contains(canvasPosition)) {
         found = node;
@@ -101,6 +121,7 @@ mixin SelectMixin on BaseCanvasController {
 
     if (found == null) {
       clearSelection();
+      selectWire(null);
       return;
     }
 
@@ -109,15 +130,14 @@ mixin SelectMixin on BaseCanvasController {
 
     if (selectedNodeKey != found) {
       selectedNodeKey = found;
+      // Clear wire selection when selecting a node
+      selectWire(null);
       notifyListeners();
     }
   }
 
   void moveSelection(Offset delta) {
     if (selectedNodeKey == null) {
-      if (this is PanMixin) {
-        (this as PanMixin).pan(delta);
-      }
       return;
     }
 
@@ -145,13 +165,5 @@ mixin SelectMixin on BaseCanvasController {
     nodes[index] = updatedNode;
 
     notifyListeners();
-  }
-
-  Offset screenToCanvasCoordinates(Offset screenPosition) {
-    return (screenPosition - offset) / scale;
-  }
-
-  Offset canvasToScreenCoordinates(Offset canvasPosition) {
-    return (canvasPosition * scale) + offset;
   }
 }

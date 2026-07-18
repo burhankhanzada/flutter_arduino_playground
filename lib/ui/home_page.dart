@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/ui/widgets/canvas_area.dart';
-import 'package:flutter_arduino_playground/ui/widgets/components_palette.dart';
+import 'package:flutter_arduino_playground/ui/palette/components_palette.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});

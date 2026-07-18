@@ -19,8 +19,9 @@ class CanvasPointerEvent extends StatefulWidget {
 class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   CanvasController get controller => widget.controller;
 
-  double _lastScale = 1.0;
-  Offset _lastPan = Offset.zero;
+  bool _isDraggingDuringWiring = false;
+  Offset? _startDownPos;
+  int _lastClickTime = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -31,37 +32,8 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
       onPointerMove: onPointerMove,
       onPointerHover: onPointerHover,
       onPointerCancel: onPointerCancel,
-      onPointerSignal: _onPointerSignal,
-      onPointerPanZoomStart: (event) {
-        _lastScale = 1.0;
-        _lastPan = Offset.zero;
-      },
-      onPointerPanZoomUpdate: (event) {
-        // Handle two-finger pan
-        final Offset panDelta = event.pan - _lastPan;
-        _lastPan = event.pan;
-        controller.pan(panDelta);
-
-        // Handle pinch zoom
-        final double relativeScale = event.scale / _lastScale;
-        _lastScale = event.scale;
-        if (relativeScale != 1.0) {
-          controller.zoom(relativeScale, focusPoint: event.localPosition);
-        }
-      },
-      onPointerPanZoomEnd: (event) {
-        _lastScale = 1.0;
-        _lastPan = Offset.zero;
-      },
       child: widget.child,
     );
-  }
-
-  void _onPointerSignal(PointerSignalEvent event) {
-    if (event is PointerScrollEvent) {
-      final double zoomFactor = event.scrollDelta.dy > 0 ? 0.9 : 1.1;
-      controller.zoom(zoomFactor, focusPoint: event.localPosition);
-    }
   }
 
   void onPointerCancel(PointerCancelEvent event) {
@@ -83,6 +55,8 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
     if (controller.isWiring) {
       controller.checkHover();
       controller.updateWiring(canvasPos);
+    } else if (controller.isDraggingBendPoint) {
+      controller.updateDraggingBendPoint(canvasPos);
     } else {
       controller.moveSelection(event.delta);
     }
@@ -95,6 +69,8 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
       } else {
         controller.cancelWiring();
       }
+    } else if (controller.isDraggingBendPoint) {
+      controller.stopDraggingBendPoint();
     }
 
     controller.mouseDown = false;
@@ -104,12 +80,51 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   void onPointerDown(PointerDownEvent event) {
     controller.mouseDown = true;
     controller.mouseLocalPosition = event.localPosition;
+    final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
+    _startDownPos = event.localPosition;
+    _isDraggingDuringWiring = false;
 
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final isDoubleClick = (now - _lastClickTime < 300);
+    _lastClickTime = now;
+
+    // 0. If already wiring, this click represents the Finish point (or cancellation)
+    if (controller.isWiring) {
+      if (controller.hoveredPort != null) {
+        controller.completeWiring(controller.hoveredPort!);
+      } else {
+        controller.cancelWiring();
+      }
+      return;
+    }
+
+    // 1. Double-click on a wire to create a bend point
+    if (isDoubleClick && controller.hoveredWireId != null) {
+      controller.createBendPointAt(canvasPos);
+      return;
+    }
+
+    // 2. Check Port interaction (Wiring)
     if (controller.hoveredPort != null) {
-      final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
       controller.startWiring(controller.hoveredPort!, canvasPos);
-    } else {
+      return;
+    }
+
+    // 3. Check Wire interaction (Selection and Bending)
+    if (controller.hoveredWireId != null) {
       controller.checkSelection();
+      if (controller.selectedWireId == controller.hoveredWireId) {
+        controller.startDraggingBendPoint(canvasPos);
+        return;
+      }
+    }
+
+    // 4. Fallback to Node interaction
+    controller.checkSelection();
+
+    // If a wire was just selected (or already selected) and we missed it in step 2 (edge case)
+    if (controller.selectedWireId != null && !controller.isDraggingBendPoint) {
+      controller.startDraggingBendPoint(canvasPos);
     }
   }
 }

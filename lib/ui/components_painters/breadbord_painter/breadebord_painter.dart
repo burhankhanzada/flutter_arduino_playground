@@ -73,7 +73,7 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
     if (id.startsWith('rail_')) {
       final parts = id.split('_');
       if (parts.length < 4) return null;
-      // final side = parts[1];
+      final isRightSide = parts[1] == 'right';
       final channel = parts[2] == 'plus' ? BreadboardChannel.plus : BreadboardChannel.minus;
       final row = int.tryParse(parts[3]) ?? 0;
 
@@ -81,7 +81,9 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       final isPlus = channel == BreadboardChannel.plus;
       final x = isPlus ? rail.dot1Offset : rail.dot2Offset;
       final y = config.firstRowY + row * config.gridCellStep;
-      return Offset(x, y);
+
+      final railStartX = isRightSide ? config.rightPowerRailOffset : config.boardPadding;
+      return Offset(railStartX + x, y);
     } else if (id.startsWith('sig_')) {
       final parts = id.split('_');
       if (parts.length < 4) return null;
@@ -351,7 +353,7 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
 
     if (isHighlighted) {
       _paint.color = highlightColor;
-      canvas.drawCircle(offset, dotRadiusOuter + 4, _paint);
+      canvas.drawCircle(offset, dotRadiusOuter + 2, _paint);
     }
 
     _paint.color = holeBevelLight;

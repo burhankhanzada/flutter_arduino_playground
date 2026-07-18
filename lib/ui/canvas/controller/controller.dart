@@ -1,12 +1,10 @@
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
-import 'package:flutter_arduino_playground/ui/canvas/controller/pan_mixin.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/select_mixin.dart';
-import 'package:flutter_arduino_playground/ui/canvas/controller/zoom_mixin.dart';
 
 class CanvasController extends BaseCanvasController
-    with PanMixin, ZoomMixin, SelectMixin, ConnectionMixin {
+    with ConnectionMixin, SelectMixin {
   bool get canvasMoveEnabled => !mouseDown;
 
   CanvasController({
