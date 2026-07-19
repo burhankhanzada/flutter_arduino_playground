@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 
 class CanvasPointerEvent extends StatefulWidget {
@@ -26,14 +27,26 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerUp: onPointerUp,
-      onPointerDown: onPointerDown,
-      onPointerMove: onPointerMove,
-      onPointerHover: onPointerHover,
-      onPointerCancel: onPointerCancel,
-      child: widget.child,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event.logicalKey == LogicalKeyboardKey.escape) {
+          if (controller.isWiring) {
+            controller.cancelWiring();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerUp: onPointerUp,
+        onPointerDown: onPointerDown,
+        onPointerMove: onPointerMove,
+        onPointerHover: onPointerHover,
+        onPointerCancel: onPointerCancel,
+        child: widget.child,
+      ),
     );
   }
 

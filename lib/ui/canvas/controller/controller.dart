@@ -117,6 +117,49 @@ class CanvasController extends BaseCanvasController
     notifyListeners();
   }
 
+  void fitToContent(Size viewportSize) {
+    if (nodes.isEmpty) {
+      centerOrigin(viewportSize);
+      return;
+    }
+    
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = -double.infinity;
+    double maxY = -double.infinity;
+
+    for (final node in nodes) {
+      final rect = node.rect;
+      if (rect.left < minX) minX = rect.left;
+      if (rect.top < minY) minY = rect.top;
+      if (rect.right > maxX) maxX = rect.right;
+      if (rect.bottom > maxY) maxY = rect.bottom;
+    }
+
+    final contentWidth = maxX - minX;
+    final contentHeight = maxY - minY;
+    final contentCenterX = minX + contentWidth / 2;
+    final contentCenterY = minY + contentHeight / 2;
+
+    // Calculate scale to fit (with 100px padding)
+    final padding = 100.0;
+    double scaleX = viewportSize.width / (contentWidth + padding);
+    double scaleY = viewportSize.height / (contentHeight + padding);
+    
+    // Fallback if width/height is 0
+    if (!scaleX.isFinite) scaleX = 1.0;
+    if (!scaleY.isFinite) scaleY = 1.0;
+
+    double targetScale = math.min(scaleX, scaleY).clamp(minScale, maxScale);
+
+    final matrix = Matrix4.identity()
+      ..translate(viewportSize.width / 2, viewportSize.height / 2)
+      ..scale(targetScale)
+      ..translate(-contentCenterX, -contentCenterY);
+
+    viewerController.value = matrix;
+  }
+
   @override
   void completeWiring(PortLocation endPort) {
     if (startPort != null && startPort != endPort) {
@@ -216,6 +259,28 @@ class CanvasController extends BaseCanvasController
     selectedNodeKey = updatedNode;
     nodes[index] = updatedNode;
     _updateConnectedWires(updatedNode.key);
+    notifyListeners();
+  }
+
+  void layerUp() {
+    if (selectedNodeKey == null) return;
+    final index = nodes.indexOf(selectedNodeKey!);
+    if (index == -1 || index == nodes.length - 1) return;
+
+    saveHistory();
+    final node = nodes.removeAt(index);
+    nodes.insert(index + 1, node);
+    notifyListeners();
+  }
+
+  void layerDown() {
+    if (selectedNodeKey == null) return;
+    final index = nodes.indexOf(selectedNodeKey!);
+    if (index == -1 || index == 0) return;
+
+    saveHistory();
+    final node = nodes.removeAt(index);
+    nodes.insert(index - 1, node);
     notifyListeners();
   }
 
