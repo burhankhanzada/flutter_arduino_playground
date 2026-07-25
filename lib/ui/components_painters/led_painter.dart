@@ -5,6 +5,14 @@ import 'package:flutter_arduino_playground/ui/components_painters/port_provider.
 
 class LEDPainter extends CustomPainter with PortProvider {
   final _paint = Paint();
+  final ValueNotifier<bool> _isOnNotifier;
+
+  LEDPainter._(this._isOnNotifier) : super(repaint: _isOnNotifier);
+
+  factory LEDPainter() => LEDPainter._(ValueNotifier<bool>(false));
+
+  bool get isOn => _isOnNotifier.value;
+  set isOn(bool value) => _isOnNotifier.value = value;
 
   static const _bodyHeight = 40.0;
   static const _legsHeight = 20.0;
@@ -41,15 +49,37 @@ class LEDPainter extends CustomPainter with PortProvider {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant LEDPainter oldDelegate) {
+    return oldDelegate.isOn != isOn;
+  }
 
   void _drawBody(Canvas canvas) {
     const topRadius = Radius.circular(15);
     const bottomRadius = Radius.circular(4);
     const innerRadius = Radius.circular(2);
 
+    final baseColor = isOn ? Colors.redAccent : Colors.red[800]!;
+    final highlightColor = isOn ? Colors.white70 : Colors.red[400]!;
+
+    if (isOn) {
+      // Draw a glowing effect
+      final glowPaint = Paint()
+        ..color = Colors.redAccent.withOpacity(0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15.0);
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          const Rect.fromLTWH(-10, -10, _width + 20, _bodyHeight + 20),
+          topLeft: topRadius,
+          topRight: topRadius,
+          bottomLeft: bottomRadius,
+          bottomRight: bottomRadius,
+        ),
+        glowPaint,
+      );
+    }
+
     // Main body
-    _paint.color = Colors.red;
+    _paint.color = baseColor;
     _paint.style = PaintingStyle.fill;
     canvas.drawRRect(
       RRect.fromRectAndCorners(
@@ -63,7 +93,7 @@ class LEDPainter extends CustomPainter with PortProvider {
     );
 
     // Inner highlight for a slight 3D look
-    _paint.color = Colors.red[300]!;
+    _paint.color = highlightColor;
     canvas.drawRRect(
       RRect.fromRectAndCorners(
         const Rect.fromLTWH(4, 4, _width - 12, _bodyHeight - 10),

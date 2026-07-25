@@ -60,7 +60,7 @@ class _CanvasAreaState extends State<CanvasArea> {
 
       final componentModel = components.firstWhere(
         (type) => type.name == componentName,
-      );
+      ).clone();
 
       final canvasComponentModel = CanvasNodeModel(
         position: canvasPosition,

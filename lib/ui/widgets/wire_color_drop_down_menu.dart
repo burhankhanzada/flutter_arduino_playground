@@ -61,7 +61,9 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
     Color? targetColor = controller.currentWireColor;
 
     if (controller.selectedWireId != null) {
-      final wireIndex = controller.wires.indexWhere((w) => w.id == controller.selectedWireId);
+      final wireIndex = controller.wires.indexWhere(
+        (w) => w.id == controller.selectedWireId,
+      );
       if (wireIndex != -1) {
         targetColor = controller.wires[wireIndex].color;
       }
@@ -69,7 +71,7 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
 
     String newName = 'Auto';
     for (final entry in colors.entries) {
-      if (entry.value?.value == targetColor?.value) {
+      if (entry.value?.toARGB32() == targetColor?.toARGB32()) {
         newName = entry.key;
         break;
       }

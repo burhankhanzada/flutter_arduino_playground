@@ -5,7 +5,60 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class ArduinoPainter extends CustomPainter {
+import 'package:flutter_arduino_playground/models/port_model.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
+
+class _PinGroup {
+  final int count;
+  final double startX;
+  final double startY;
+  final List<String> labels;
+  final List<String> ids;
+  final bool isTop;
+
+  _PinGroup({
+    required this.startX,
+    required this.startY,
+    required this.labels,
+    required this.ids,
+    required this.isTop,
+  }) : count = labels.length;
+}
+
+final List<_PinGroup> _pinGroups = [
+  _PinGroup(
+    startX: 130,
+    startY: 10,
+    labels: ['', '', 'AREF', 'GND', '13', '12', '~11', '~10', '~9', '8'],
+    ids: ['SCL', 'SDA', 'AREF', 'GND_1', '13', '12', '11', '10', '9', '8'],
+    isTop: true,
+  ),
+  _PinGroup(
+    startX: 265,
+    startY: 10,
+    labels: ['7', '~6', '~5', '4', '~3', '2', 'TK->1', 'RX<-0'],
+    ids: ['7', '6', '5', '4', '3', '2', '1', '0'],
+    isTop: true,
+  ),
+  _PinGroup(
+    startX: 180,
+    startY: 270,
+    labels: ['', 'IOREF', 'RESET', '3.3V', '5V', 'GND', 'GND', 'Vin'],
+    ids: ['NC', 'IOREF', 'RESET', '3.3V', '5V', 'GND_2', 'GND_3', 'VIN'],
+    isTop: false,
+  ),
+  _PinGroup(
+    startX: 290,
+    startY: 270,
+    labels: ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'],
+    ids: ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'],
+    isTop: false,
+  ),
+];
+
+class ArduinoPainter extends CustomPainter with PortProvider {
+  static const componentSize = Size(370, 290);
+
   final _paint = Paint();
 
   late Size size;
@@ -30,13 +83,30 @@ class ArduinoPainter extends CustomPainter {
   ui.Image? image;
 
   @override
+  List<ComponentPort> getPorts() {
+    final ports = <ComponentPort>[];
+    for (final group in _pinGroups) {
+      for (int i = 0; i < group.count; i++) {
+        ports.add(
+          ComponentPort(
+            id: group.ids[i],
+            name: group.labels[i].isEmpty ? group.ids[i] : group.labels[i],
+            localOffset: Offset(group.startX + i * 12 + 5, group.startY + 5),
+          ),
+        );
+      }
+    }
+    return ports;
+  }
+
+  @override
   void paint(Canvas canvas, Size size) {
     this.size = size;
     this.canvas = canvas;
 
     // Scale factors to adapt to any size
-    scaleX = size.width / 370;
-    scaleY = size.height / 290;
+    scaleX = size.width / componentSize.width;
+    scaleY = size.height / componentSize.height;
 
     vertialStart = 0 * scaleY;
     horzontalStart = 0 * scaleX;
@@ -58,13 +128,9 @@ class ArduinoPainter extends CustomPainter {
       _paint,
     );
 
-    drawPinsSet(10, 130 * scaleX, 10 * scaleY);
-
-    drawPinsSet(8, 265 * scaleX, 10 * scaleY);
-
-    drawPinsSet(8, 180 * scaleX, 270 * scaleY);
-
-    drawPinsSet(6, 290 * scaleX, 270 * scaleY);
+    for (final group in _pinGroups) {
+      drawPinsSet(group.count, group.startX * scaleX, group.startY * scaleY);
+    }
 
     drawLabels();
 
@@ -95,10 +161,7 @@ class ArduinoPainter extends CustomPainter {
       );
 
       canvas.save();
-      canvas.translate(
-        150 * scaleX,
-        115 * scaleY,
-      );
+      canvas.translate(150 * scaleX, 115 * scaleY);
       canvas.scale(0.125 * scaleX);
       canvas.drawImage(image!, Offset.zero, _paint);
 
@@ -148,126 +211,41 @@ class ArduinoPainter extends CustomPainter {
       fontWeight: FontWeight.bold,
     );
 
-    List leftColumnsLabels = [
-      '',
-      '',
-      'AREF',
-      'GND',
-      '13',
-      '12',
-      '~11',
-      '~10',
-      '~9',
-      '8',
-    ];
+    for (final group in _pinGroups) {
+      double horziontalOffset = horzontalStart + ((group.startX + 5) * scaleX);
 
-    double horziontalOffset = horzontalStart + (135 * scaleX);
+      for (int i = 0; i < group.count; i++) {
+        if (group.labels[i].isEmpty) continue;
 
-    for (int i = 0; i < leftColumnsLabels.length; i++) {
-      double x = horziontalOffset + (i * spacing);
+        double x = horziontalOffset + (i * spacing);
 
-      canvas.save();
-      canvas.translate(x, pinSize + 20);
-      canvas.rotate(-math.pi / 2);
+        canvas.save();
+        if (group.isTop) {
+          canvas.translate(x, pinSize + 20);
+        } else {
+          canvas.translate(x, pinSize + 250 * scaleY);
+        }
+        canvas.rotate(-math.pi / 2);
 
-      TextPainter textPainter = TextPainter(
-        text: TextSpan(text: leftColumnsLabels[i], style: labelStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.end,
-      );
+        TextPainter textPainter = TextPainter(
+          text: TextSpan(text: group.labels[i], style: labelStyle),
+          textDirection: TextDirection.ltr,
+          textAlign: group.isTop ? TextAlign.end : TextAlign.start,
+        );
 
-      textPainter.layout();
+        textPainter.layout();
 
-      textPainter.paint(
-        canvas,
-        Offset(-textPainter.width, -textPainter.height / 2),
-      );
+        if (group.isTop) {
+          textPainter.paint(
+            canvas,
+            Offset(-textPainter.width, -textPainter.height / 2),
+          );
+        } else {
+          textPainter.paint(canvas, Offset(0, -textPainter.height / 2));
+        }
 
-      canvas.restore();
-    }
-
-    leftColumnsLabels = ['7', '~6', '~5', '4', '~3', '2', 'TK->1', 'RX<-0'];
-
-    horziontalOffset = horzontalStart + (270 * scaleX);
-
-    for (int i = 0; i < leftColumnsLabels.length; i++) {
-      double x = horziontalOffset + (i * spacing);
-
-      canvas.save();
-      canvas.translate(x, pinSize + 20);
-      canvas.rotate(-math.pi / 2);
-
-      TextPainter textPainter = TextPainter(
-        text: TextSpan(text: leftColumnsLabels[i], style: labelStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.end,
-      );
-
-      textPainter.layout();
-
-      textPainter.paint(
-        canvas,
-        Offset(-textPainter.width, -textPainter.height / 2),
-      );
-
-      canvas.restore();
-    }
-
-    leftColumnsLabels = [
-      '',
-      'IOREF',
-      'RESET',
-      '3.3V',
-      '5V',
-      'GND',
-      'GND',
-      'Vin',
-    ];
-
-    horziontalOffset = horzontalStart + (185 * scaleX);
-
-    for (int i = 0; i < leftColumnsLabels.length; i++) {
-      double x = horziontalOffset + (i * spacing);
-
-      canvas.save();
-      canvas.translate(x, pinSize + 250 * scaleY);
-      canvas.rotate(-math.pi / 2);
-
-      TextPainter textPainter = TextPainter(
-        text: TextSpan(text: leftColumnsLabels[i], style: labelStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.start,
-      );
-
-      textPainter.layout();
-
-      textPainter.paint(canvas, Offset(0, -textPainter.height / 2));
-
-      canvas.restore();
-    }
-
-    leftColumnsLabels = ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'];
-
-    horziontalOffset = horzontalStart + (295 * scaleX);
-
-    for (int i = 0; i < leftColumnsLabels.length; i++) {
-      double x = horziontalOffset + (i * spacing);
-
-      canvas.save();
-      canvas.translate(x, pinSize + 250 * scaleY);
-      canvas.rotate(-math.pi / 2);
-
-      TextPainter textPainter = TextPainter(
-        text: TextSpan(text: leftColumnsLabels[i], style: labelStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.start,
-      );
-
-      textPainter.layout();
-
-      textPainter.paint(canvas, Offset(0, -textPainter.height / 2));
-
-      canvas.restore();
+        canvas.restore();
+      }
     }
 
     _paint

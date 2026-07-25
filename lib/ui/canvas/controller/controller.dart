@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
@@ -24,36 +23,56 @@ class CanvasController extends BaseCanvasController
 
   CanvasController({
     List<CanvasNodeModel> nodes = const [],
+    List<WireModel> wires = const [],
     bool snapResizeToGrid = false,
   }) {
     if (nodes.isNotEmpty) {
       this.nodes.addAll(nodes);
     }
+    if (wires.isNotEmpty) {
+      this.wires.addAll(wires);
+    }
+  }
+
+  void forceUpdate() {
+    notifyListeners();
   }
 
   void saveHistory() {
-    _undoStack.add(CanvasStateSnapshot(
-      nodes: nodes.map((n) => n.copyWith()).toList(),
-      wires: wires.map((w) => w.copyWith(bendPoints: List.from(w.bendPoints))).toList(),
-    ));
+    _undoStack.add(
+      CanvasStateSnapshot(
+        nodes: nodes.map((n) => n.copyWith()).toList(),
+        wires: wires
+            .map((w) => w.copyWith(bendPoints: List.from(w.bendPoints)))
+            .toList(),
+      ),
+    );
     _redoStack.clear();
   }
 
   void undo() {
     if (_undoStack.isEmpty) return;
-    _redoStack.add(CanvasStateSnapshot(
-      nodes: nodes.map((n) => n.copyWith()).toList(),
-      wires: wires.map((w) => w.copyWith(bendPoints: List.from(w.bendPoints))).toList(),
-    ));
+    _redoStack.add(
+      CanvasStateSnapshot(
+        nodes: nodes.map((n) => n.copyWith()).toList(),
+        wires: wires
+            .map((w) => w.copyWith(bendPoints: List.from(w.bendPoints)))
+            .toList(),
+      ),
+    );
     _applySnapshot(_undoStack.removeLast());
   }
 
   void redo() {
     if (_redoStack.isEmpty) return;
-    _undoStack.add(CanvasStateSnapshot(
-      nodes: nodes.map((n) => n.copyWith()).toList(),
-      wires: wires.map((w) => w.copyWith(bendPoints: List.from(w.bendPoints))).toList(),
-    ));
+    _undoStack.add(
+      CanvasStateSnapshot(
+        nodes: nodes.map((n) => n.copyWith()).toList(),
+        wires: wires
+            .map((w) => w.copyWith(bendPoints: List.from(w.bendPoints)))
+            .toList(),
+      ),
+    );
     _applySnapshot(_redoStack.removeLast());
   }
 
@@ -61,14 +80,19 @@ class CanvasController extends BaseCanvasController
     nodes.clear();
     nodes.addAll(snapshot.nodes.map((n) => n.copyWith()));
     wires.clear();
-    wires.addAll(snapshot.wires.map((w) => w.copyWith(bendPoints: List.from(w.bendPoints))));
-    
-    if (selectedNodeKey != null && !nodes.any((n) => n.key == selectedNodeKey!.key)) {
+    wires.addAll(
+      snapshot.wires.map(
+        (w) => w.copyWith(bendPoints: List.from(w.bendPoints)),
+      ),
+    );
+
+    if (selectedNodeKey != null &&
+        !nodes.any((n) => n.key == selectedNodeKey!.key)) {
       selectedNodeKey = null;
     } else if (selectedNodeKey != null) {
       selectedNodeKey = nodes.firstWhere((n) => n.key == selectedNodeKey!.key);
     }
-    
+
     if (selectedWireId != null && !wires.any((w) => w.id == selectedWireId)) {
       selectedWireId = null;
     }
@@ -107,10 +131,12 @@ class CanvasController extends BaseCanvasController
       removeWire(selectedWireId!);
     } else if (selectedNodeKey != null) {
       // Remove any wires connected to this node
-      wires.removeWhere((w) => 
-          w.start.nodeKey == selectedNodeKey!.key || 
-          w.end.nodeKey == selectedNodeKey!.key);
-      
+      wires.removeWhere(
+        (w) =>
+            w.start.nodeKey == selectedNodeKey!.key ||
+            w.end.nodeKey == selectedNodeKey!.key,
+      );
+
       nodes.removeWhere((node) => node.key == selectedNodeKey!.key);
       clearSelection();
     }
@@ -122,7 +148,7 @@ class CanvasController extends BaseCanvasController
       centerOrigin(viewportSize);
       return;
     }
-    
+
     double minX = double.infinity;
     double minY = double.infinity;
     double maxX = -double.infinity;
@@ -145,7 +171,7 @@ class CanvasController extends BaseCanvasController
     final padding = 100.0;
     double scaleX = viewportSize.width / (contentWidth + padding);
     double scaleY = viewportSize.height / (contentHeight + padding);
-    
+
     // Fallback if width/height is 0
     if (!scaleX.isFinite) scaleX = 1.0;
     if (!scaleY.isFinite) scaleY = 1.0;
@@ -197,7 +223,7 @@ class CanvasController extends BaseCanvasController
     final updatedNode = oldNode.copyWith(
       rotationAngle: oldNode.rotationAngle + (math.pi / 18),
     );
-    
+
     final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
     final finalNode = updatedNode.copyWith(position: newPosition);
 
@@ -220,7 +246,7 @@ class CanvasController extends BaseCanvasController
     final updatedNode = oldNode.copyWith(
       rotationAngle: oldNode.rotationAngle - (math.pi / 18),
     );
-    
+
     final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
     final finalNode = updatedNode.copyWith(position: newPosition);
 
@@ -287,7 +313,7 @@ class CanvasController extends BaseCanvasController
   void _updateConnectedWires(Key nodeKey) {
     // When a node rotates, its ports move. Wires will naturally follow the new port positions
     // on next paint because wire start/end are PortLocations, which look up the current getPortOffset.
-    // However, if we cache bend points, we might need to adjust them? 
+    // However, if we cache bend points, we might need to adjust them?
     // For now, simple rotation just updates the node. The WirePainter will fetch the new
     // rotated port offset automatically during paint.
   }
