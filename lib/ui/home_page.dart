@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:re_editor/re_editor.dart';
+
 import 'package:flutter_arduino_playground/ui/widgets/canvas_area.dart';
 import 'package:flutter_arduino_playground/ui/palette/components_palette.dart';
 import 'package:flutter_arduino_playground/ui/widgets/header_bar.dart';
-import 'package:flutter_arduino_playground/ui/widgets/toolbar.dart';
 import 'package:flutter_arduino_playground/ui/widgets/view_selector.dart';
 import 'package:flutter_arduino_playground/ui/widgets/arduino_code_editor.dart';
 
-import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
-import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'package:flutter_arduino_playground/models/wire_model.dart';
-import 'package:flutter_arduino_playground/constants.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
-
-import 'package:re_editor/re_editor.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
+import 'package:flutter_arduino_playground/utils/circuit_parser.dart';
+import 'package:flutter_arduino_playground/utils/circuit_defaults.dart';
+import 'package:flutter_arduino_playground/controllers/workspace_controller.dart';
+import 'package:flutter_arduino_playground/simulation/simulation_runner.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,149 +21,58 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final CanvasController _controller;
-  late final CodeLineEditingController _codeController;
-  MainAreaView _currentView = MainAreaView.design;
-  bool _isSimulating = false;
-
-  void _toggleSimulation() {
-    if (_isSimulating) {
-      setState(() {
-        _isSimulating = false;
-      });
-    } else {
-      setState(() {
-        _isSimulating = true;
-      });
-      _runSimulationLoop();
-    }
-  }
-
-  Future<void> _runSimulationLoop() async {
-    final code = _codeController.text;
-    final loopRegex = RegExp(r'void\s+loop\(\)\s*\{([^}]*)\}');
-    final match = loopRegex.firstMatch(code);
-    if (match == null) {
-      setState(() => _isSimulating = false);
-      return;
-    }
-
-    // Strip comments
-    final cleanBody = match.group(1)!.replaceAll(RegExp(r'//.*'), '');
-    final statements = cleanBody
-        .split(';')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    final ledNode = _controller.nodes.firstWhere(
-      (n) => n.componentModel.name == 'LED',
-    );
-    final ledPainter = ledNode.componentModel.painter as LEDPainter;
-
-    while (_isSimulating) {
-      if (statements.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        continue;
-      }
-
-      for (final statement in statements) {
-        if (!_isSimulating) break;
-
-        if (statement.startsWith('digitalWrite')) {
-          final isHigh = statement.contains('HIGH');
-          ledPainter.isOn = isHigh;
-          _controller.forceUpdate();
-        } else if (statement.startsWith('delay')) {
-          final delayMatch = RegExp(r'delay\((\d+)\)').firstMatch(statement);
-          if (delayMatch != null) {
-            final ms = int.tryParse(delayMatch.group(1)!) ?? 1000;
-            await Future.delayed(Duration(milliseconds: ms));
-          }
-        }
-      }
-      // Small safety yield
-      await Future.delayed(Duration.zero);
-    }
-
-    ledPainter.isOn = false;
-    _controller.forceUpdate();
-  }
+  late final WorkspaceController _workspaceController;
+  late final SimulationRunner _simulationRunner;
 
   @override
   void initState() {
     super.initState();
-    _codeController = CodeLineEditingController.fromText('''void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-}
+    final defaultSetup = CircuitDefaults.getBlinkExample();
 
-void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-  delay(1000);                      // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-  delay(1000);                      // wait for a second
-}
-''');
+    final canvasController = CanvasController(nodes: [], wires: []);
 
-    final arduinoModel = components
-        .firstWhere((c) => c.name == 'Arduino Uno')
-        .clone();
-    final ledModel = components.firstWhere((c) => c.name == 'LED').clone();
-    final resistorModel = components
-        .firstWhere((c) => c.name == 'Resistor')
-        .clone();
-
-    final arduinoNode = CanvasNodeModel(
-      position: const Offset(-150, -50),
-      componentModel: arduinoModel,
+    final parsedData = CircuitParser.parse(defaultSetup.diagramCode);
+    CircuitParser.applyToCanvas(
+      parsedData,
+      canvasController.nodes,
+      canvasController.wires,
     );
 
-    final resistorNode = CanvasNodeModel(
-      position: const Offset(-60, -120),
-      componentModel: resistorModel,
+    final codeController = CodeLineEditingController.fromText(
+      defaultSetup.cppCode,
+    );
+    final diagramCodeController = CodeLineEditingController.fromText(
+      defaultSetup.diagramCode,
     );
 
-    final ledNode = CanvasNodeModel(
-      position: const Offset(20, -152.5),
-      componentModel: ledModel,
+    _workspaceController = WorkspaceController(
+      canvasController: canvasController,
+      codeController: codeController,
+      diagramCodeController: diagramCodeController,
     );
 
-    final wire1 = WireModel(
-      id: 'wire1',
-      start: PortLocation(nodeKey: arduinoNode.key, portId: '13'),
-      end: PortLocation(nodeKey: resistorNode.key, portId: 'left'),
-      bendPoints: [const Offset(33, -80), const Offset(-47.5, -80)],
-      color: Colors.orange,
-    );
-
-    final wire2 = WireModel(
-      id: 'wire2',
-      start: PortLocation(nodeKey: resistorNode.key, portId: 'right'),
-      end: PortLocation(nodeKey: ledNode.key, portId: 'anode'),
-      bendPoints: [], // Straight line
-      color: Colors.red,
-    );
-
-    final wire3 = WireModel(
-      id: 'wire3',
-      start: PortLocation(nodeKey: ledNode.key, portId: 'cathode'),
-      end: PortLocation(nodeKey: arduinoNode.key, portId: 'GND_1'),
-      bendPoints: [const Offset(37.5, -60), const Offset(21, -60)],
-      color: Colors.black,
-    );
-
-    _controller = CanvasController(
-      nodes: [arduinoNode, resistorNode, ledNode],
-      wires: [wire1, wire2, wire3],
-    );
+    _simulationRunner = SimulationRunner(canvasController: canvasController);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _codeController.dispose();
+    _simulationRunner.stop();
+    _workspaceController.dispose();
     super.dispose();
+  }
+
+  void _toggleSimulation() {
+    if (_simulationRunner.isSimulating) {
+      setState(() {
+        _simulationRunner.stop();
+      });
+    } else {
+      setState(() {
+        _simulationRunner.start(_workspaceController.codeController.text, () {
+          if (mounted) setState(() {});
+        });
+      });
+    }
   }
 
   @override
@@ -174,30 +81,121 @@ void loop() {
       body: Column(
         children: [
           HeaderBar(
-            view: _currentView,
-            onViewChanged: (view) {
-              setState(() {
-                _currentView = view;
-              });
-            },
-            isSimulating: _isSimulating,
+            view: MainAreaView.design,
+            onViewChanged: (_) {},
+            workspaceController: _workspaceController,
+            isSimulating: _simulationRunner.isSimulating,
             onToggleSimulation: _toggleSimulation,
           ),
-          if (_currentView == MainAreaView.design)
-            Toolbar(controller: _controller),
           Expanded(
-            child: _currentView == MainAreaView.design
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: CanvasArea(controller: _controller)),
-                      const ComponentPalette(),
-                    ],
-                  )
-                : ArduinoCodeEditor(controller: _codeController),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: LeftPanelEditor(
+                    workspaceController: _workspaceController,
+                  ),
+                ),
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(
+                  flex: 1,
+                  child: RightPanelCanvas(
+                    workspaceController: _workspaceController,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class LeftPanelEditor extends StatelessWidget {
+  final WorkspaceController workspaceController;
+
+  const LeftPanelEditor({super.key, required this.workspaceController});
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Material(
+            color: Color(0xFFF3F3F3),
+            child: TabBar(
+              tabs: [
+                Tab(text: 'sketch.cpp'),
+                Tab(text: 'diagram.dart'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                ArduinoCodeEditor(
+                  controller: workspaceController.codeController,
+                ),
+                ArduinoCodeEditor(
+                  controller: workspaceController.diagramCodeController,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class RightPanelCanvas extends StatefulWidget {
+  final WorkspaceController workspaceController;
+
+  const RightPanelCanvas({super.key, required this.workspaceController});
+
+  @override
+  State<RightPanelCanvas> createState() => _RightPanelCanvasState();
+}
+
+class _RightPanelCanvasState extends State<RightPanelCanvas> {
+  bool _showPalette = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        CanvasArea(controller: widget.workspaceController.canvasController),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          top: 0,
+          bottom: 0,
+          right: _showPalette ? 0 : -300,
+          width: 300,
+          child: const Material(elevation: 8, child: ComponentPalette()),
+        ),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          top: 16,
+          right: _showPalette ? 316 : 16,
+          child: FloatingActionButton.small(
+            heroTag: 'palette_toggle',
+            onPressed: () {
+              setState(() {
+                _showPalette = !_showPalette;
+              });
+            },
+            tooltip: 'Toggle Components Palette',
+            child: Icon(_showPalette ? Icons.chevron_right : Icons.add),
+          ),
+        ),
+      ],
     );
   }
 }

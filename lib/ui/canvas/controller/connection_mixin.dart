@@ -5,6 +5,7 @@ import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/routing_utils.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
 
 mixin ConnectionMixin on BaseCanvasController {
   final List<WireModel> wires = [];
@@ -22,11 +23,17 @@ mixin ConnectionMixin on BaseCanvasController {
   void updateWireColor(Color? newColor) {
     currentWireColor = newColor;
     if (newColor != null && selectedWireId != null) {
-       final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
-       if (wireIndex != -1) {
-         final wire = wires[wireIndex];
-         wires[wireIndex] = wire.copyWith(color: newColor);
-       }
+      final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
+      if (wireIndex != -1) {
+        final wire = wires[wireIndex];
+        wires[wireIndex] = wire.copyWith(color: newColor);
+      }
+    } else if (newColor != null && selectedNodeKey != null) {
+      final node =
+          nodes.where((n) => n.key == selectedNodeKey!.key).firstOrNull;
+      if (node != null && node.componentModel.painter is LEDPainter) {
+        (node.componentModel.painter as LEDPainter).color = newColor;
+      }
     }
     notifyListeners();
   }

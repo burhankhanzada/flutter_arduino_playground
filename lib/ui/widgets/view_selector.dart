@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum MainAreaView { design, code }
+enum MainAreaView { design, code, diagramCode }
 
 class ViewSelector extends StatelessWidget {
   final MainAreaView view;
@@ -23,8 +23,13 @@ class ViewSelector extends StatelessWidget {
           icon: Icon(Icons.design_services),
         ),
         ButtonSegment<MainAreaView>(
+          value: MainAreaView.diagramCode,
+          label: Text('Diagram Code'),
+          icon: Icon(Icons.data_object),
+        ),
+        ButtonSegment<MainAreaView>(
           value: MainAreaView.code,
-          label: Text('Code'),
+          label: Text('C++ Code'),
           icon: Icon(Icons.code),
         ),
       ],

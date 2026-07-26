@@ -144,6 +144,8 @@ class WirePainter extends CustomPainter {
 
       final dPrev = vPrev.distance;
       final dNext = vNext.distance;
+      
+      if (dPrev == 0 || dNext == 0) continue; // Skip identical points to avoid NaN
 
       // Determine radius (clamp if segment is too short)
       double radius = preferredRadius;

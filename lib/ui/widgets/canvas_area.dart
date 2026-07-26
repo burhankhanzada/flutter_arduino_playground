@@ -3,6 +3,7 @@ import 'package:flutter_arduino_playground/constants.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/canvas.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
+import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 class CanvasArea extends StatefulWidget {
@@ -18,15 +19,13 @@ class _CanvasAreaState extends State<CanvasArea> {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Card.outlined(
-        clipBehavior: Clip.antiAlias,
-        child: DropRegion(
-          onPerformDrop: onPerformDrop,
-          formats: Formats.standardFormats,
-          onDropOver: (event) => DropOperation.copy,
-          child: Canvas(controller: controller),
-        ),
+    return Card.outlined(
+      clipBehavior: Clip.antiAlias,
+      child: DropRegion(
+        onPerformDrop: onPerformDrop,
+        formats: Formats.standardFormats,
+        onDropOver: (event) => DropOperation.copy,
+        child: Canvas(controller: controller),
       ),
     );
   }
@@ -44,26 +43,29 @@ class _CanvasAreaState extends State<CanvasArea> {
     }
 
     if (componentName != null) {
-      final renderBox = context.findRenderObject() as RenderBox;
-      final localPosition = renderBox.globalToLocal(event.position.local);
+      // event.position.local is already in local coordinates of the DropRegion / CanvasArea
+      final canvasPosition =
+          controller.screenToCanvasCoordinates(event.position.local);
 
-      // Transform local position to canvas coordinates
-      final canvasPositionRaw = (localPosition - controller.offset) / controller.scale;
-      Offset canvasPosition = canvasPositionRaw;
+      final componentModel = components
+          .firstWhere(
+            (type) => type.name == componentName,
+          )
+          .clone();
+
+      // Center the component under the mouse drop location
+      Offset nodePosition = canvasPosition -
+          Offset(
+            componentModel.size.width / 2,
+            componentModel.size.height / 2,
+          );
 
       if (controller.snapToGrid) {
-        canvasPosition = Offset(
-          (canvasPosition.dx / controller.gridCellSize).round() * controller.gridCellSize,
-          (canvasPosition.dy / controller.gridCellSize).round() * controller.gridCellSize,
-        );
+        nodePosition = GridSystem.snapOffset(nodePosition);
       }
 
-      final componentModel = components.firstWhere(
-        (type) => type.name == componentName,
-      ).clone();
-
       final canvasComponentModel = CanvasNodeModel(
-        position: canvasPosition,
+        position: nodePosition,
         componentModel: componentModel,
       );
 

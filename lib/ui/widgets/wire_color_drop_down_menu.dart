@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
+import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
 
 class WireColorDropDownMenu extends StatefulWidget {
   final CanvasController controller;
@@ -66,6 +67,13 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
       );
       if (wireIndex != -1) {
         targetColor = controller.wires[wireIndex].color;
+      }
+    } else if (controller.selectedNodeKey != null) {
+      final node = controller.nodes
+          .where((n) => n.key == controller.selectedNodeKey!.key)
+          .firstOrNull;
+      if (node != null && node.componentModel.painter is LEDPainter) {
+        targetColor = (node.componentModel.painter as LEDPainter).color;
       }
     }
 

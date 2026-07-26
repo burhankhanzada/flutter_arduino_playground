@@ -56,6 +56,10 @@ final List<_PinGroup> _pinGroups = [
   ),
 ];
 
+class _RepaintNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
+
 class ArduinoPainter extends CustomPainter with PortProvider {
   static const componentSize = Size(370, 290);
 
@@ -80,7 +84,11 @@ class ArduinoPainter extends CustomPainter with PortProvider {
 
   late final pinSize = 10 * scaleX;
 
-  ui.Image? image;
+  static ui.Image? _cachedImage;
+  static bool _isLoading = false;
+  static final _RepaintNotifier _repaintNotifier = _RepaintNotifier();
+
+  ArduinoPainter() : super(repaint: _repaintNotifier);
 
   @override
   List<ComponentPort> getPorts() {
@@ -114,7 +122,7 @@ class ArduinoPainter extends CustomPainter with PortProvider {
     verticalEnd = size.height * scaleY;
     horizontalEnd = size.width * scaleX;
 
-    if (image == null) {
+    if (_cachedImage == null) {
       loadSvg();
     }
 
@@ -140,21 +148,27 @@ class ArduinoPainter extends CustomPainter with PortProvider {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
 
-  Future<void> loadSvg() async {
+  static Future<void> loadSvg() async {
+    if (_cachedImage != null || _isLoading) return;
+    _isLoading = true;
+
     try {
       final pictureInfo = await vg.loadPicture(
-        SvgAssetLoader("assets/arduino_logo.svg"),
+        const SvgAssetLoader("assets/arduino_logo.svg"),
         null,
       );
 
-      image = await pictureInfo.picture.toImage(720, 490);
+      _cachedImage = await pictureInfo.picture.toImage(720, 490);
+      _repaintNotifier.notify();
     } catch (e) {
       debugPrint('Error loading SVG: $e');
+    } finally {
+      _isLoading = false;
     }
   }
 
   void drawLogo() {
-    if (image != null) {
+    if (_cachedImage != null) {
       _paint.colorFilter = const ColorFilter.mode(
         Colors.white,
         BlendMode.srcIn,
@@ -163,7 +177,7 @@ class ArduinoPainter extends CustomPainter with PortProvider {
       canvas.save();
       canvas.translate(150 * scaleX, 115 * scaleY);
       canvas.scale(0.125 * scaleX);
-      canvas.drawImage(image!, Offset.zero, _paint);
+      canvas.drawImage(_cachedImage!, Offset.zero, _paint);
 
       canvas.restore();
       _paint.colorFilter = null;
