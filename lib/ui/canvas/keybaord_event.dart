@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 
 class KeyboardEvent extends StatelessWidget {
@@ -14,10 +15,7 @@ class KeyboardEvent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CallbackShortcuts(
-      bindings: bindings(context),
-      child: Focus(autofocus: true, child: child),
-    );
+    return CallbackShortcuts(bindings: bindings(context), child: child);
   }
 
   Map<SingleActivator, VoidCallback> bindings(BuildContext context) => {

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/breadboard_interaction.dart';
 import 'package:flutter_arduino_playground/models/component_model.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/breadebord_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/breadebord_painter.dart';
 
 class ComponentWidget extends StatelessWidget {
   final ComponentModel componentModel;

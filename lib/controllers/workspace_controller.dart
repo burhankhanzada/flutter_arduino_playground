@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:re_editor/re_editor.dart';
+
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 import 'package:flutter_arduino_playground/utils/circuit_parser.dart';
-import 'package:re_editor/re_editor.dart';
+import 'package:flutter_arduino_playground/utils/circuit_defaults.dart';
 
 class WorkspaceController {
   final CanvasController canvasController;
@@ -19,6 +21,28 @@ class WorkspaceController {
   }) {
     diagramCodeController.addListener(_syncCodeToCanvas);
     canvasController.addListener(_syncCanvasToCode);
+  }
+
+  factory WorkspaceController.fromTemplate(ProjectTemplate template) {
+    final canvasController = CanvasController(nodes: [], wires: []);
+
+    final parsedData = CircuitParser.parse(template.diagramCode);
+    CircuitParser.applyToCanvas(
+      parsedData,
+      canvasController.nodes,
+      canvasController.wires,
+    );
+
+    final codeController = CodeLineEditingController.fromText(template.cppCode);
+    final diagramCodeController = CodeLineEditingController.fromText(
+      template.diagramCode,
+    );
+
+    return WorkspaceController(
+      canvasController: canvasController,
+      codeController: codeController,
+      diagramCodeController: diagramCodeController,
+    );
   }
 
   void dispose() {

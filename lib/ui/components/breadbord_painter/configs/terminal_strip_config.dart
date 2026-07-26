@@ -1,4 +1,4 @@
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/breadboard_config.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/configs/breadboard_config.dart';
 
 class TerminalStripConfig {
   final double rowLabelRelX;

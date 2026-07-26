@@ -1,10 +1,10 @@
 import 'package:flutter_arduino_playground/models/component_model.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/arduino_painter.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/breadebord_painter.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/breadboard_config.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/push_button_painter.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/resistor_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/arduino_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/breadebord_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/configs/breadboard_config.dart';
+import 'package:flutter_arduino_playground/ui/components/push_button_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/resistor_painter.dart';
 
 final breadboardPainterHalf = BreadboardPainter(
   config: BreadboardConfig.half(),

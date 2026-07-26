@@ -1,13 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'dart:math' as math;
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/breadebord_painter.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/logic/breadboard_hit_tester.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/breadebord_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/logic/breadboard_hit_tester.dart';
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 mixin SelectMixin on BaseCanvasController, ConnectionMixin {
   bool isSelected(Key key) {
@@ -28,7 +30,7 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
   void checkHover() {
     // Convert screen coordinates to canvas coordinates
     final canvasPosition = screenToCanvasCoordinates(mouseLocalPosition);
-    
+
     CanvasNodeModel? found;
     for (final node in nodes.reversed) {
       if (node.rect.contains(canvasPosition)) {
@@ -57,32 +59,36 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
       // Unrotate the local position to match the unrotated component painters
       final w = found.componentModel.size.width;
       final h = found.componentModel.size.height;
-      
+
       // Translate rotatedLocalPos to bounding box center
       final dx = rotatedLocalPos.dx - found.pivotOffset.dx;
       final dy = rotatedLocalPos.dy - found.pivotOffset.dy;
-      
+
       // Inverse rotate (by -rotationAngle)
       final angle = found.rotationAngle;
       final c = math.cos(-angle);
       final s = math.sin(-angle);
       final rx = dx * c - dy * s;
       final ry = dx * s + dy * c;
-      
+
       // Translate back to unrotated component top-left (pivot was topCenter)
       var localX = rx + w / 2;
       var localY = ry;
-      
+
       // Un-flip
       if (found.flipHorizontal) localX = w - localX;
       if (found.flipVertical) localY = h - localY;
-      
+
       Offset localPos = Offset(localX, localY);
 
       // Update breadboard-specific hover
       if (found.componentModel.painter is BreadboardPainter) {
-        final breadboardPainter = found.componentModel.painter as BreadboardPainter;
-        final newBreadboardHover = BreadboardHitTester.hitTest(localPos, breadboardPainter.config);
+        final breadboardPainter =
+            found.componentModel.painter as BreadboardPainter;
+        final newBreadboardHover = BreadboardHitTester.hitTest(
+          localPos,
+          breadboardPainter.config,
+        );
         if (found.breadboardHover != newBreadboardHover) {
           found.breadboardHover = newBreadboardHover;
           changed = true;
@@ -93,7 +99,9 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
       final painter = found.componentModel.painter;
       if (painter is PortProvider) {
         final newPort = (painter as PortProvider).getPortAt(localPos);
-        final newPortLoc = newPort != null ? PortLocation(nodeKey: found.key, portId: newPort.id) : null;
+        final newPortLoc = newPort != null
+            ? PortLocation(nodeKey: found.key, portId: newPort.id)
+            : null;
         if (hoveredPort != newPortLoc) {
           hoveredPort = newPortLoc;
           changed = true;
@@ -104,7 +112,7 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
         found.hoveredLocalPosition = localPos;
         changed = true;
       }
-      
+
       if (hoveredPort != null) {
         hitPort = true;
       }

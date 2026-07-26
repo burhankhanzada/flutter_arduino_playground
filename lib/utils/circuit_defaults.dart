@@ -21,6 +21,7 @@ class CircuitDefaults {
 }
 
 void loop() {
+  Serial.println("Hello World");
   digitalWrite(2, HIGH);
   digitalWrite(4, LOW);
   delay(500);

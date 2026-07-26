@@ -6,7 +6,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 class _PinGroup {
   final int count;

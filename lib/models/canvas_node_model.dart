@@ -1,10 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_arduino_playground/models/breadboard_interaction.dart';
 import 'package:flutter_arduino_playground/models/component_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'dart:math' as math;
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 class CanvasNodeModel {
   CanvasNodeModel({
@@ -28,19 +29,18 @@ class CanvasNodeModel {
     final h = componentModel.size.height;
     final c = math.cos(rotationAngle);
     final s = math.sin(rotationAngle);
-    
+
     // Corners relative to topCenter (w/2, 0)
     final points = [
-      Offset(-w/2, 0),
-      Offset(w/2, 0),
-      Offset(-w/2, h),
-      Offset(w/2, h),
+      Offset(-w / 2, 0),
+      Offset(w / 2, 0),
+      Offset(-w / 2, h),
+      Offset(w / 2, h),
     ];
-    
-    return points.map((p) => Offset(
-      p.dx * c - p.dy * s,
-      p.dx * s + p.dy * c
-    )).toList();
+
+    return points
+        .map((p) => Offset(p.dx * c - p.dy * s, p.dx * s + p.dy * c))
+        .toList();
   }
 
   Offset get pivotOffset {
@@ -77,29 +77,29 @@ class CanvasNodeModel {
     if (painter is PortProvider) {
       final baseOffset = (painter as PortProvider).getPortOffsetById(portId);
       if (baseOffset == null) return null;
-      
+
       final w = componentModel.size.width;
-      
+
       // Calculate rotation center of the unrotated component (topCenter)
       final cx = w / 2;
       final cy = 0.0;
-      
+
       // Apply flip
       var fx = baseOffset.dx;
       var fy = baseOffset.dy;
       if (flipHorizontal) fx = w - fx;
       if (flipVertical) fy = componentModel.size.height - fy;
-      
+
       // Translate to center
       final dx = fx - cx;
       final dy = fy - cy;
-      
+
       // Rotate by angle
       final c = math.cos(rotationAngle);
       final s = math.sin(rotationAngle);
       final rx = dx * c - dy * s;
       final ry = dx * s + dy * c;
-      
+
       // Translate back to the new bounding box's coordinate system
       return pivotOffset + Offset(rx, ry);
     }

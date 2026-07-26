@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 class PushButtonPainter extends CustomPainter with PortProvider {
   final Paint _paint = Paint();

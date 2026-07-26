@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/circuit_model.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/constants.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
 
 class CircuitParser {
   static CircuitData parse(String code) {
@@ -21,12 +22,15 @@ class CircuitParser {
       final xMatch = RegExp(r"x:\s*([-\d.]+)").firstMatch(body);
       final yMatch = RegExp(r"y:\s*([-\d.]+)").firstMatch(body);
       final colorMatch = RegExp(r"color:\s*'([^']+)'").firstMatch(body);
-      final rotateMatch =
-          RegExp(r"(?:rotate|rotationAngle):\s*([-\d.]+)").firstMatch(body);
-      final flipHMatch =
-          RegExp(r"flipHorizontal:\s*(true|false)").firstMatch(body);
-      final flipVMatch =
-          RegExp(r"flipVertical:\s*(true|false)").firstMatch(body);
+      final rotateMatch = RegExp(
+        r"(?:rotate|rotationAngle):\s*([-\d.]+)",
+      ).firstMatch(body);
+      final flipHMatch = RegExp(
+        r"flipHorizontal:\s*(true|false)",
+      ).firstMatch(body);
+      final flipVMatch = RegExp(
+        r"flipVertical:\s*(true|false)",
+      ).firstMatch(body);
 
       if (typeMatch != null &&
           idMatch != null &&
@@ -133,8 +137,9 @@ class CircuitParser {
         extraProps.add("color: '$colorName'");
       }
       if (node.rotationAngle != 0.0) {
-        final formattedAngle =
-            double.parse(node.rotationAngle.toStringAsFixed(4));
+        final formattedAngle = double.parse(
+          node.rotationAngle.toStringAsFixed(4),
+        );
         extraProps.add('rotate: $formattedAngle');
       }
       if (node.flipHorizontal) {
@@ -144,8 +149,9 @@ class CircuitParser {
         extraProps.add('flipVertical: true');
       }
 
-      final extraStr =
-          extraProps.isNotEmpty ? ', ${extraProps.join(', ')}' : '';
+      final extraStr = extraProps.isNotEmpty
+          ? ', ${extraProps.join(', ')}'
+          : '';
       buffer.writeln(
         '    Part(type: \'${node.componentModel.name}\', id: \'$id\', x: ${node.position.dx}, y: ${node.position.dy}$extraStr),',
       );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
 class BreadboardConfig {
@@ -12,23 +13,27 @@ class BreadboardConfig {
   final gridCellStep = GridSystem.cellSize * 2;
 
   late final boardHeight = bottomLabelY + boardPadding;
-  late final boardWidth = boardPadding * 2 + totalHorizontalCells * gridCellStep;
+  late final boardWidth =
+      boardPadding * 2 + totalHorizontalCells * gridCellStep;
 
   late final powerRailCells = 3; // plus rail + inter-rail gap + minus rail
   late final leftSectionCells = powerRailCells + 1; // 1 = row label
   final centerGapCells = 1; // divider between the two signal sections
   late final totalHorizontalCells = (leftSectionCells + colsCount) * 2;
 
-  late final leftSectionStartOffset = boardPadding + leftSectionCells * gridCellStep;
+  late final leftSectionStartOffset =
+      boardPadding + leftSectionCells * gridCellStep;
   // late final leftSectionStartOffset = GridSystem.center + leftSectionCells * step;
 
   late final rightSectionStartOffset =
-      boardPadding + (leftSectionCells + centerGapCells + colsCount) * gridCellStep;
+      boardPadding +
+      (leftSectionCells + centerGapCells + colsCount) * gridCellStep;
 
   late final rightLabelStartCells =
       leftSectionCells + centerGapCells + 2 * colsCount;
 
-  late final rightRowLabelOffset = boardPadding + rightLabelStartCells * gridCellStep;
+  late final rightRowLabelOffset =
+      boardPadding + rightLabelStartCells * gridCellStep;
 
   late final rightPowerRailOffset =
       boardPadding + (rightLabelStartCells + 1) * gridCellStep;

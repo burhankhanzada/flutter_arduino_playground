@@ -1,9 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
-
-import 'dart:math' as math;
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 class LEDPainter extends CustomPainter with PortProvider {
   final _paint = Paint();
@@ -11,12 +12,10 @@ class LEDPainter extends CustomPainter with PortProvider {
   final ValueNotifier<Color> _colorNotifier;
 
   LEDPainter._(this._isOnNotifier, this._colorNotifier)
-      : super(repaint: Listenable.merge([_isOnNotifier, _colorNotifier]));
+    : super(repaint: Listenable.merge([_isOnNotifier, _colorNotifier]));
 
-  factory LEDPainter({Color color = Colors.red}) => LEDPainter._(
-        ValueNotifier<bool>(false),
-        ValueNotifier<Color>(color),
-      );
+  factory LEDPainter({Color color = Colors.red}) =>
+      LEDPainter._(ValueNotifier<bool>(false), ValueNotifier<Color>(color));
 
   bool get isOn => _isOnNotifier.value;
   set isOn(bool value) => _isOnNotifier.value = value;
@@ -87,8 +86,9 @@ class LEDPainter extends CustomPainter with PortProvider {
           .withValues(alpha: 0.75);
     } else {
       baseColor = hsl.withLightness(hsl.lightness * 0.6).toColor();
-      highlightColor =
-          hsl.withLightness(math.min(1.0, hsl.lightness * 0.9)).toColor();
+      highlightColor = hsl
+          .withLightness(math.min(1.0, hsl.lightness * 0.9))
+          .toColor();
       glowColor = Colors.transparent;
     }
 

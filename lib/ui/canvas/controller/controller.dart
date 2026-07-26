@@ -179,9 +179,14 @@ class CanvasController extends BaseCanvasController
     double targetScale = math.min(scaleX, scaleY).clamp(minScale, maxScale);
 
     final matrix = Matrix4.identity()
-      ..translate(viewportSize.width / 2, viewportSize.height / 2)
-      ..scale(targetScale)
-      ..translate(-contentCenterX, -contentCenterY);
+      ..translateByDouble(
+        viewportSize.width / 2,
+        viewportSize.height / 2,
+        0.0,
+        1.0,
+      )
+      ..scaleByDouble(targetScale, targetScale, 1.0, 1.0)
+      ..translateByDouble(-contentCenterX, -contentCenterY, 0.0, 1.0);
 
     viewerController.value = matrix;
   }

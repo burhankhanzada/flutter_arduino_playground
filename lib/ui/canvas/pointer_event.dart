@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 
 class CanvasPointerEvent extends StatefulWidget {
@@ -20,14 +21,22 @@ class CanvasPointerEvent extends StatefulWidget {
 class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   CanvasController get controller => widget.controller;
 
-  bool _isDraggingDuringWiring = false;
+  final FocusNode _focusNode = FocusNode();
+
   Offset? _startDownPos;
   int _lastClickTime = 0;
   bool _hasSavedHistoryForDrag = false;
 
   @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Focus(
+      focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
         if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -76,7 +85,10 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
       }
       controller.updateDraggingBendPoint(canvasPos);
     } else {
-      if (controller.selectedNodeKey != null && !_hasSavedHistoryForDrag && _startDownPos != null && (event.localPosition - _startDownPos!).distance > 2) {
+      if (controller.selectedNodeKey != null &&
+          !_hasSavedHistoryForDrag &&
+          _startDownPos != null &&
+          (event.localPosition - _startDownPos!).distance > 2) {
         controller.saveHistory();
         _hasSavedHistoryForDrag = true;
       }
@@ -100,12 +112,11 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   }
 
   void onPointerDown(PointerDownEvent event) {
-    FocusScope.of(context).requestFocus();
+    _focusNode.requestFocus();
     controller.mouseDown = true;
     controller.mouseLocalPosition = event.localPosition;
     final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
     _startDownPos = event.localPosition;
-    _isDraggingDuringWiring = false;
     _hasSavedHistoryForDrag = false;
 
     final now = DateTime.now().millisecondsSinceEpoch;

@@ -1,20 +1,23 @@
-import 'dart:math';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/routing_utils.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
 
 mixin ConnectionMixin on BaseCanvasController {
   final List<WireModel> wires = [];
-  
+
   // Transient state for the wire being dragged
   PortLocation? startPort;
   Offset? currentDragPosition;
   Color? currentWireColor; // null means Auto
-  Color? activeDragColor; // Holds the assigned random or current color during dragging
+  Color?
+  activeDragColor; // Holds the assigned random or current color during dragging
 
   // Interaction state
   String? hoveredWireId;
@@ -29,8 +32,9 @@ mixin ConnectionMixin on BaseCanvasController {
         wires[wireIndex] = wire.copyWith(color: newColor);
       }
     } else if (newColor != null && selectedNodeKey != null) {
-      final node =
-          nodes.where((n) => n.key == selectedNodeKey!.key).firstOrNull;
+      final node = nodes
+          .where((n) => n.key == selectedNodeKey!.key)
+          .firstOrNull;
       if (node != null && node.componentModel.painter is LEDPainter) {
         (node.componentModel.painter as LEDPainter).color = newColor;
       }
@@ -40,13 +44,26 @@ mixin ConnectionMixin on BaseCanvasController {
 
   Color _getRandomColor() {
     final availableColors = [
-      Colors.black, Colors.red, Colors.orange, Colors.amber, Colors.yellow,
-      Colors.lime, Colors.green, Colors.teal, Colors.cyan, Colors.blue,
-      Colors.indigo, Colors.purple, Colors.pink, Colors.brown, Colors.grey, Colors.white,
+      Colors.black,
+      Colors.red,
+      Colors.orange,
+      Colors.amber,
+      Colors.yellow,
+      Colors.lime,
+      Colors.green,
+      Colors.teal,
+      Colors.cyan,
+      Colors.blue,
+      Colors.indigo,
+      Colors.purple,
+      Colors.pink,
+      Colors.brown,
+      Colors.grey,
+      Colors.white,
     ];
-    return availableColors[Random().nextInt(availableColors.length)];
+    return availableColors[math.Random().nextInt(availableColors.length)];
   }
-  
+
   // State for dragging a bend point or segment
   String? draggingWireId;
   int? draggingBendPointIndex;
@@ -54,7 +71,9 @@ mixin ConnectionMixin on BaseCanvasController {
   bool isDraggingSegment = false;
 
   bool get isWiring => startPort != null;
-  bool get isDraggingBendPoint => draggingWireId != null && (draggingBendPointIndex != null || isDraggingSegment);
+  bool get isDraggingBendPoint =>
+      draggingWireId != null &&
+      (draggingBendPointIndex != null || isDraggingSegment);
 
   void startWiring(PortLocation port, Offset initialPosition) {
     selectedWireId = null;
@@ -72,7 +91,7 @@ mixin ConnectionMixin on BaseCanvasController {
 
   void completeWiring(PortLocation endPort) {
     if (startPort == null) return;
-    
+
     // Check if connection already exists or is to the same port
     if (startPort == endPort) {
       cancelWiring();
@@ -164,7 +183,9 @@ mixin ConnectionMixin on BaseCanvasController {
   double _distanceToSegment(Offset p, Offset a, Offset b) {
     final double l2 = (a - b).distanceSquared;
     if (l2 == 0.0) return (p - a).distance;
-    final double t = (((p.dx - a.dx) * (b.dx - a.dx) + (p.dy - a.dy) * (b.dy - a.dy)) / l2).clamp(0.0, 1.0);
+    final double t =
+        (((p.dx - a.dx) * (b.dx - a.dx) + (p.dy - a.dy) * (b.dy - a.dy)) / l2)
+            .clamp(0.0, 1.0);
     final Offset projection = a + (b - a) * t;
     return (p - projection).distance;
   }
@@ -182,9 +203,9 @@ mixin ConnectionMixin on BaseCanvasController {
 
   void startDraggingBendPoint(Offset canvasPosition) {
     if (selectedWireId == null) return;
-    
+
     final wire = wires.firstWhere((w) => w.id == selectedWireId);
-    
+
     // Grab existing handle (start and end points are handled by components, not by bend point dragging)
     for (int i = 0; i < wire.bendPoints.length; i++) {
       if ((canvasPosition - wire.bendPoints[i]).distance < 15.0) {
@@ -200,7 +221,7 @@ mixin ConnectionMixin on BaseCanvasController {
   void createBendPointAt(Offset canvasPosition) {
     if (selectedWireId == null) return;
     final wire = wires.firstWhere((w) => w.id == selectedWireId);
-    
+
     final startPos = getPortPosition(wire.start);
     final endPos = getPortPosition(wire.end);
     if (startPos == null || endPos == null) return;
@@ -208,11 +229,13 @@ mixin ConnectionMixin on BaseCanvasController {
     final List<Offset> points = [startPos, ...wire.bendPoints, endPos];
     for (int i = 0; i < points.length - 1; i++) {
       if (_distanceToSegment(canvasPosition, points[i], points[i + 1]) < 12.0) {
-        final newPoint = snapToGrid ? GridSystem.snapToCenterOffset(canvasPosition) : canvasPosition;
+        final newPoint = snapToGrid
+            ? GridSystem.snapToCenterOffset(canvasPosition)
+            : canvasPosition;
         final List<Offset> newBendPoints = List<Offset>.from(wire.bendPoints);
         newBendPoints.insert(i, newPoint);
         wires[wires.indexOf(wire)] = wire.copyWith(bendPoints: newBendPoints);
-        
+
         draggingWireId = wire.id;
         draggingBendPointIndex = i;
         isDraggingSegment = false;
@@ -224,22 +247,24 @@ mixin ConnectionMixin on BaseCanvasController {
 
   void updateDraggingBendPoint(Offset canvasPosition) {
     if (draggingWireId == null || draggingBendPointIndex == null) return;
-    
+
     final wireIndex = wires.indexWhere((w) => w.id == draggingWireId);
     if (wireIndex == -1) return;
-    
+
     final wire = wires[wireIndex];
     final startPos = getPortPosition(wire.start);
     final endPos = getPortPosition(wire.end);
     if (startPos == null || endPos == null) return;
 
-    Offset newPoint = snapToGrid ? GridSystem.snapToCenterOffset(canvasPosition) : canvasPosition;
-    
+    Offset newPoint = snapToGrid
+        ? GridSystem.snapToCenterOffset(canvasPosition)
+        : canvasPosition;
+
     // Freeform handle drag: just move the point
     final List<Offset> points = List<Offset>.from(wire.bendPoints);
     points[draggingBendPointIndex!] = newPoint;
     wires[wireIndex] = wire.copyWith(bendPoints: points);
-    
+
     notifyListeners();
   }
 
@@ -250,13 +275,16 @@ mixin ConnectionMixin on BaseCanvasController {
         final wire = wires[wireIndex];
         final startPos = getPortPosition(wire.start);
         final endPos = getPortPosition(wire.end);
-        
+
         if (startPos != null && endPos != null) {
           // Manual cleanup: only simplify (remove redundant collinear/same points)
           final List<Offset> allPoints = [startPos, ...wire.bendPoints, endPos];
           final simplifiedPoints = RoutingUtils.simplify(allPoints);
           if (simplifiedPoints.length >= 2) {
-            final updatedBendPoints = simplifiedPoints.sublist(1, simplifiedPoints.length - 1);
+            final updatedBendPoints = simplifiedPoints.sublist(
+              1,
+              simplifiedPoints.length - 1,
+            );
             wires[wireIndex] = wire.copyWith(bendPoints: updatedBendPoints);
           }
         }

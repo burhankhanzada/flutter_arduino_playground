@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_arduino_playground/models/component_model.dart';
-import 'package:flutter_arduino_playground/ui/widgets/component_widget.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
+
+import 'package:flutter_arduino_playground/models/component_model.dart';
+import 'package:flutter_arduino_playground/ui/canvas/component_widget.dart';
 
 class PaletteComponent extends StatelessWidget {
   final ComponentModel componentModel;

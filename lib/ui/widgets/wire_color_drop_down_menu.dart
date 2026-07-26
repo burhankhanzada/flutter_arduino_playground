@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/led_painter.dart';
+import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
 
 class WireColorDropDownMenu extends StatefulWidget {
   final CanvasController controller;

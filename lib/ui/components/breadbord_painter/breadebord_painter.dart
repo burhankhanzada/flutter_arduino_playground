@@ -1,14 +1,15 @@
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'package:flutter_arduino_playground/models/breadboard_interaction.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/breadboard_config.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/power_rail_config.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/configs/terminal_strip_config.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/breadbord_painter/logic/breadboard_hit_tester.dart';
-import 'package:flutter_arduino_playground/ui/components_painters/port_provider.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/configs/breadboard_config.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/configs/power_rail_config.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/configs/terminal_strip_config.dart';
+import 'package:flutter_arduino_playground/ui/components/breadbord_painter/logic/breadboard_hit_tester.dart';
+import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 class BreadboardPainter extends CustomPainter implements PortProvider {
   final BreadboardConfig config;
@@ -32,18 +33,20 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
 
     final rail = PowerRailConfig(config);
 
-    if (hover.channel == BreadboardChannel.plus || hover.channel == BreadboardChannel.minus) {
+    if (hover.channel == BreadboardChannel.plus ||
+        hover.channel == BreadboardChannel.minus) {
       final isPlus = hover.channel == BreadboardChannel.plus;
       // For rails, we need to know WHICH row specifically.
-      // Although BreadboardHoverState doesn't store the row for rails yet, 
+      // Although BreadboardHoverState doesn't store the row for rails yet,
       // we can calculate it from localOffset.
-      final row = ((localOffset.dy - config.firstRowY) / config.gridCellStep).round();
+      final row = ((localOffset.dy - config.firstRowY) / config.gridCellStep)
+          .round();
       if (row < 0 || row >= config.rowsCount) return null;
 
       final channelName = isPlus ? 'plus' : 'minus';
       id = 'rail_${side}_${channelName}_$row';
       name = 'Power Rail $side ${channelName.toUpperCase()} Row ${row + 1}';
-      
+
       final x = isPlus ? rail.dot1Offset : rail.dot2Offset;
       final y = config.firstRowY + row * config.gridCellStep;
       portOffset = Offset(x, y);
@@ -52,17 +55,24 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       // Find exact column based on localX
       // Left section starts at config.leftSectionStartOffset
       // Right section starts at config.rightSectionStartOffset
-      final double sectionStartX = hover.isRightSide ? config.rightSectionStartOffset : config.leftSectionStartOffset;
+      final double sectionStartX = hover.isRightSide
+          ? config.rightSectionStartOffset
+          : config.leftSectionStartOffset;
       final localX = localOffset.dx - sectionStartX;
       final col = (localX / config.gridCellStep).round();
       if (col < 0 || col >= 5) return null;
 
-      final section = hover.isRightSide ? TerminalStripConfig.right(config) : TerminalStripConfig.left(config);
+      final section = hover.isRightSide
+          ? TerminalStripConfig.right(config)
+          : TerminalStripConfig.left(config);
       final colName = section.columnLabels[col];
-      
+
       id = 'sig_${side}_${colName}_$row';
       name = 'Signal $side ${colName.toUpperCase()} Row ${row + 1}';
-      portOffset = Offset(sectionStartX + col * config.gridCellStep, config.firstRowY + row * config.gridCellStep);
+      portOffset = Offset(
+        sectionStartX + col * config.gridCellStep,
+        config.firstRowY + row * config.gridCellStep,
+      );
     }
 
     return ComponentPort(id: id, name: name, localOffset: portOffset);
@@ -74,7 +84,9 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       final parts = id.split('_');
       if (parts.length < 4) return null;
       final isRightSide = parts[1] == 'right';
-      final channel = parts[2] == 'plus' ? BreadboardChannel.plus : BreadboardChannel.minus;
+      final channel = parts[2] == 'plus'
+          ? BreadboardChannel.plus
+          : BreadboardChannel.minus;
       final row = int.tryParse(parts[3]) ?? 0;
 
       final rail = PowerRailConfig(config);
@@ -82,7 +94,9 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       final x = isPlus ? rail.dot1Offset : rail.dot2Offset;
       final y = config.firstRowY + row * config.gridCellStep;
 
-      final railStartX = isRightSide ? config.rightPowerRailOffset : config.boardPadding;
+      final railStartX = isRightSide
+          ? config.rightPowerRailOffset
+          : config.boardPadding;
       return Offset(railStartX + x, y);
     } else if (id.startsWith('sig_')) {
       final parts = id.split('_');
@@ -91,15 +105,19 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       final colName = parts[2];
       final row = int.tryParse(parts[3]) ?? 0;
 
-      final section =
-          isRightSide ? TerminalStripConfig.right(config) : TerminalStripConfig.left(config);
+      final section = isRightSide
+          ? TerminalStripConfig.right(config)
+          : TerminalStripConfig.left(config);
       final colIndex = section.columnLabels.indexOf(colName);
       if (colIndex == -1) return null;
 
-      final double sectionStartX =
-          isRightSide ? config.rightSectionStartOffset : config.leftSectionStartOffset;
-      return Offset(sectionStartX + colIndex * config.gridCellStep,
-          config.firstRowY + row * config.gridCellStep);
+      final double sectionStartX = isRightSide
+          ? config.rightSectionStartOffset
+          : config.leftSectionStartOffset;
+      return Offset(
+        sectionStartX + colIndex * config.gridCellStep,
+        config.firstRowY + row * config.gridCellStep,
+      );
     }
     return null;
   }
@@ -120,8 +138,7 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
 
   @override
   bool shouldRepaint(covariant BreadboardPainter oldDelegate) =>
-      config != oldDelegate.config ||
-      hoverState != oldDelegate.hoverState;
+      config != oldDelegate.config || hoverState != oldDelegate.hoverState;
 
   void _drawBackground(Canvas canvas, Size size) {
     _paint.color = backgroundColor;
@@ -151,12 +168,20 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
   void _drawSignalSections(Canvas canvas) {
     canvas.save();
     canvas.translate(config.leftSectionStartOffset, 0);
-    _drawSignalSection(canvas, TerminalStripConfig.left(config), sectionOffsetX: config.leftSectionStartOffset);
+    _drawSignalSection(
+      canvas,
+      TerminalStripConfig.left(config),
+      sectionOffsetX: config.leftSectionStartOffset,
+    );
     canvas.restore();
 
     canvas.save();
     canvas.translate(config.rightSectionStartOffset, 0);
-    _drawSignalSection(canvas, TerminalStripConfig.right(config), sectionOffsetX: config.rightSectionStartOffset);
+    _drawSignalSection(
+      canvas,
+      TerminalStripConfig.right(config),
+      sectionOffsetX: config.rightSectionStartOffset,
+    );
     canvas.restore();
   }
 
@@ -171,7 +196,11 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       ..strokeCap = cap;
   }
 
-  void _drawPowerRail(Canvas canvas, PowerRailConfig rail, {bool isRight = false}) {
+  void _drawPowerRail(
+    Canvas canvas,
+    PowerRailConfig rail, {
+    bool isRight = false,
+  }) {
     final double railTopY = config.firstRowY - config.gridCellSize;
     final double railBottomY = config.lastRowY + config.gridCellSize;
 
@@ -225,7 +254,11 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
 
     if (isColumn1Highlighted || isColumn2Highlighted) {
       if (isColumn1Highlighted) {
-        _applyStrokePaint(color: rail.plusColor, width: 2.0, cap: StrokeCap.round);
+        _applyStrokePaint(
+          color: rail.plusColor,
+          width: 2.0,
+          cap: StrokeCap.round,
+        );
         canvas.drawLine(
           Offset(rail.dot1Offset, 0),
           Offset(rail.dot1Offset, (config.rowsCount - 1) * config.gridCellStep),
@@ -233,7 +266,11 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
         );
       }
       if (isColumn2Highlighted) {
-        _applyStrokePaint(color: rail.minusColor, width: 2.0, cap: StrokeCap.round);
+        _applyStrokePaint(
+          color: rail.minusColor,
+          width: 2.0,
+          cap: StrokeCap.round,
+        );
         canvas.drawLine(
           Offset(rail.dot2Offset, 0),
           Offset(rail.dot2Offset, (config.rowsCount - 1) * config.gridCellStep),
@@ -261,12 +298,20 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
   }
 
   /// Draws signal dot holes and all labels for one section (a–e or f–j).
-  void _drawSignalSection(Canvas canvas, TerminalStripConfig section, {required double sectionOffsetX}) {
+  void _drawSignalSection(
+    Canvas canvas,
+    TerminalStripConfig section, {
+    required double sectionOffsetX,
+  }) {
     _drawSignalDots(canvas, section, sectionOffsetX: sectionOffsetX);
     _drawSectionLabels(canvas, section);
   }
 
-  void _drawSignalDots(Canvas canvas, TerminalStripConfig section, {required double sectionOffsetX}) {
+  void _drawSignalDots(
+    Canvas canvas,
+    TerminalStripConfig section, {
+    required double sectionOffsetX,
+  }) {
     int? highlightedRow;
     final bool isRight = sectionOffsetX == config.rightSectionStartOffset;
 
@@ -283,7 +328,10 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
       _applyStrokePaint(color: Colors.green, width: 2.0, cap: StrokeCap.round);
       canvas.drawLine(
         Offset(0, highlightedRow * config.gridCellStep),
-        Offset((section.columnLabels.length - 1) * config.gridCellStep, highlightedRow * config.gridCellStep),
+        Offset(
+          (section.columnLabels.length - 1) * config.gridCellStep,
+          highlightedRow * config.gridCellStep,
+        ),
         _paint,
       );
     }
@@ -347,8 +395,8 @@ class BreadboardPainter extends CustomPainter implements PortProvider {
     const dotRadiusInner = 3.0;
     const dotRadiusOuter = 5.0;
 
-    const halfCircleSweep = pi;
-    const topHalfStart = pi;
+    const halfCircleSweep = math.pi;
+    const topHalfStart = math.pi;
     const bottomHalfStart = 0.0;
 
     if (isHighlighted) {
