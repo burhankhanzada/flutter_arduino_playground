@@ -84,11 +84,13 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
     final controller = widget.controller;
     Color? targetColor = controller.currentWireColor;
 
-    final wireIndex = controller.wires.indexWhere(
-      (w) => w.id == controller.selectedWireId,
-    );
-    if (wireIndex != -1) {
-      targetColor = controller.wires[wireIndex].color;
+    if (controller.selectedWireIds.isNotEmpty) {
+      final wireIndex = controller.wires.indexWhere(
+        (w) => w.id == controller.selectedWireIds.first,
+      );
+      if (wireIndex != -1) {
+        targetColor = controller.wires[wireIndex].color;
+      }
     }
 
     String newName = 'Auto';
@@ -132,7 +134,7 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
     );
 
     return PopupMenuButton<String>(
-      constraints: const BoxConstraints(maxHeight: 250),
+      constraints: const BoxConstraints(maxHeight: 500),
       tooltip: 'Wire Color',
       initialValue: selectedColorName,
       onSelected: (String newValue) {
@@ -147,7 +149,7 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildColorCircle(selectedEntry),
-            const Icon(Icons.arrow_drop_down),
+            const Icon(Icons.arrow_drop_up),
           ],
         ),
       ),

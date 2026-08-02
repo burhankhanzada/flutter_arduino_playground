@@ -23,6 +23,8 @@ class LEDPainter extends CustomPainter with PortProvider {
   Color get color => _colorNotifier.value;
   set color(Color value) => _colorNotifier.value = value;
 
+  bool drawGlow = true;
+
   static const _bodyHeight = 40.0;
   static const _legsHeight = 20.0;
 
@@ -84,7 +86,7 @@ class LEDPainter extends CustomPainter with PortProvider {
     final baseColor = isOn ? color : darkColor;
     final highlightColor = isOn ? Colors.white70 : highlight;
 
-    if (isOn) {
+    if (isOn && drawGlow) {
       // Draw a glowing effect
       final glowPaint = Paint()
         ..color = color.withValues(alpha: 0.5)
@@ -146,5 +148,24 @@ class LEDPainter extends CustomPainter with PortProvider {
     for (final x in [leftLegX, rightLegX]) {
       canvas.drawLine(Offset(x, startY), Offset(x, endY), _paint);
     }
+  }
+}
+
+class LEDOutlinePainter extends CustomPainter {
+  final LEDPainter original;
+
+  LEDOutlinePainter(this.original) : super(repaint: original);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final prevGlow = original.drawGlow;
+    original.drawGlow = false;
+    original.paint(canvas, size);
+    original.drawGlow = prevGlow;
+  }
+
+  @override
+  bool shouldRepaint(covariant LEDOutlinePainter oldDelegate) {
+    return true;
   }
 }

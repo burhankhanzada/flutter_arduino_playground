@@ -12,6 +12,8 @@ import 'package:flutter_arduino_playground/ui/components/breadbord_painter/logic
 import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 mixin SelectMixin on BaseCanvasController, ConnectionMixin {
+  Offset _dragAccumulator = Offset.zero;
+
   bool isSelected(Key key) {
     return selectedNodes.any((n) => n.key == key);
   }
@@ -165,38 +167,64 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
 
     // Calculate the offset from the node's top-left corner to the click point
     dragStartOffset = canvasPosition - found.position;
+    _dragAccumulator = Offset.zero;
 
     if (!selectedNodes.contains(found)) {
       selectedNodes = [found];
+      // Clear wire selection ONLY when selecting a new node
+      selectWire(null);
     }
 
-    // Clear wire selection when selecting a node
-    selectWire(null);
     notifyListeners();
   }
 
   void moveSelection(Offset delta) {
-    if (selectedNodes.isEmpty) return;
+    if (selectedNodes.isEmpty && selectedWireIds.isEmpty) return;
 
-    for (int i = 0; i < selectedNodes.length; i++) {
-      final oldNode = selectedNodes[i];
-      final index = nodes.indexOf(oldNode);
-      if (index == -1) continue;
+    final canvasDelta = delta / scale;
+    _dragAccumulator += canvasDelta;
 
-      // Delta is the screen delta divided by scale (already canvas coordinates basically)
-      // wait, pointer_event passes `event.delta`, which is in screen coords.
-      // Actually `base_controller.dart` or `canvas_area.dart` might be doing something.
-      // Let's just use `delta / scale` to convert screen delta to canvas delta.
-      final canvasDelta = delta / scale;
-      var newPosition = oldNode.position + canvasDelta;
+    Offset actualTranslation = Offset.zero;
+
+    if (selectedNodes.isNotEmpty) {
+      final referenceNode = selectedNodes.first;
+      var newPosition = referenceNode.position + _dragAccumulator;
       
       if (snapToGrid) {
         newPosition = GridSystem.snapOffset(newPosition);
       }
 
-      final updatedNode = oldNode.copyWith(position: newPosition);
-      nodes[index] = updatedNode;
-      selectedNodes[i] = updatedNode;
+      actualTranslation = newPosition - referenceNode.position;
+
+      if (actualTranslation == Offset.zero) return;
+
+      _dragAccumulator -= actualTranslation;
+
+      for (int i = 0; i < selectedNodes.length; i++) {
+        final node = selectedNodes[i];
+        final index = nodes.indexOf(node);
+        if (index == -1) continue;
+
+        final updatedNode = node.copyWith(position: node.position + actualTranslation);
+        nodes[index] = updatedNode;
+        selectedNodes[i] = updatedNode;
+      }
+    } else {
+      actualTranslation = _dragAccumulator;
+      _dragAccumulator = Offset.zero;
+    }
+
+    if (selectedWireIds.isNotEmpty && actualTranslation != Offset.zero) {
+      for (final wireId in selectedWireIds) {
+        final wireIndex = wires.indexWhere((w) => w.id == wireId);
+        if (wireIndex != -1) {
+          final wire = wires[wireIndex];
+          if (wire.bendPoints.isNotEmpty) {
+            final newBendPoints = wire.bendPoints.map((p) => p + actualTranslation).toList();
+            wires[wireIndex] = wire.copyWith(bendPoints: newBendPoints);
+          }
+        }
+      }
     }
 
     notifyListeners();

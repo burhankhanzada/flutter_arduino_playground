@@ -116,7 +116,7 @@ class CanvasState extends State<Canvas> {
                               pendingEndMouse: controller.currentDragPosition,
                               hoveredPort: controller.hoveredPort,
                               hoveredWireId: controller.hoveredWireId,
-                              selectedWireId: controller.selectedWireId,
+                              selectedWireIds: controller.selectedWireIds,
                               selectionColor: Theme.of(context).colorScheme.primary,
                               pendingColor: controller.activeDragColor ?? Colors.yellow,
                             ),

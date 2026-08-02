@@ -34,12 +34,12 @@ class ActivityBar extends ConsumerWidget {
             activeTab: activeTab,
             tooltip: 'Property Panel',
           ),
-          _ActivityIcon(
-            icon: Icons.bug_report,
-            tab: SidebarTab.debugConsole,
-            activeTab: activeTab,
-            tooltip: 'Debug Console',
-          ),
+          // _ActivityIcon(
+          //   icon: Icons.bug_report,
+          //   tab: SidebarTab.debugConsole,
+          //   activeTab: activeTab,
+          //   tooltip: 'Debug Console',
+          // ),
           _ActivityIcon(
             icon: Icons.terminal,
             tab: SidebarTab.serialOutput,
@@ -93,7 +93,7 @@ class _ActivityIcon extends ConsumerWidget {
           child: Icon(
             icon,
             color: isActive
-                ? theme.colorScheme.onSurface
+                ? theme.colorScheme.primary
                 : theme.colorScheme.onSurfaceVariant,
             size: 24,
           ),

@@ -21,14 +21,18 @@ mixin ConnectionMixin on BaseCanvasController {
 
   // Interaction state
   String? hoveredWireId;
-  String? selectedWireId;
+  List<String> selectedWireIds = [];
 
   void updateWireColor(Color? newColor) {
     currentWireColor = newColor;
-    final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
-    if (wireIndex != -1) {
-      final wire = wires[wireIndex];
-      wires[wireIndex] = wire.copyWith(color: newColor);
+    if (newColor != null && selectedWireIds.isNotEmpty) {
+      for (final id in selectedWireIds) {
+        final wireIndex = wires.indexWhere((w) => w.id == id);
+        if (wireIndex != -1) {
+          final wire = wires[wireIndex];
+          wires[wireIndex] = wire.copyWith(color: newColor);
+        }
+      }
     }
     notifyListeners();
   }
@@ -49,7 +53,7 @@ mixin ConnectionMixin on BaseCanvasController {
       (draggingBendPointIndex != null || isDraggingSegment);
 
   void startWiring(PortLocation port, Offset initialPosition) {
-    selectedWireId = null;
+    selectedWireIds.clear();
     startPort = port;
     currentDragPosition = initialPosition;
     activeDragColor = currentWireColor ?? _getRandomColor();
@@ -92,14 +96,19 @@ mixin ConnectionMixin on BaseCanvasController {
 
   void removeWire(String id) {
     wires.removeWhere((w) => w.id == id);
-    if (selectedWireId == id) selectedWireId = null;
+    selectedWireIds.remove(id);
     if (hoveredWireId == id) hoveredWireId = null;
     notifyListeners();
   }
 
   void selectWire(String? id) {
-    if (selectedWireId == id) return;
-    selectedWireId = id;
+    if (id == null) {
+      selectedWireIds.clear();
+      notifyListeners();
+      return;
+    }
+    if (selectedWireIds.contains(id)) return;
+    selectedWireIds = [id];
     notifyListeners();
   }
 
@@ -108,7 +117,7 @@ mixin ConnectionMixin on BaseCanvasController {
 
     // 1. Check handles first (priority)
     for (final wire in wires) {
-      if (wire.id == selectedWireId) {
+      if (selectedWireIds.contains(wire.id)) {
         for (int i = 0; i < wire.bendPoints.length; i++) {
           if ((canvasPosition - wire.bendPoints[i]).distance < 15.0) {
             if (hoveredWireId != wire.id) {
@@ -175,10 +184,13 @@ mixin ConnectionMixin on BaseCanvasController {
   }
 
   void startDraggingBendPoint(Offset canvasPosition) {
-    if (selectedWireId == null) return;
-
-    final wire = wires.firstWhere((w) => w.id == selectedWireId);
-
+    if (selectedWireIds.isEmpty) return;
+    
+    final wireId = hoveredWireId != null && selectedWireIds.contains(hoveredWireId) 
+        ? hoveredWireId 
+        : selectedWireIds.first;
+    final wire = wires.firstWhere((w) => w.id == wireId);
+    
     // Grab existing handle (start and end points are handled by components, not by bend point dragging)
     for (int i = 0; i < wire.bendPoints.length; i++) {
       if ((canvasPosition - wire.bendPoints[i]).distance < 15.0) {
@@ -192,9 +204,13 @@ mixin ConnectionMixin on BaseCanvasController {
   }
 
   void createBendPointAt(Offset canvasPosition) {
-    if (selectedWireId == null) return;
-    final wire = wires.firstWhere((w) => w.id == selectedWireId);
-
+    if (selectedWireIds.isEmpty) return;
+    
+    final wireId = hoveredWireId != null && selectedWireIds.contains(hoveredWireId) 
+        ? hoveredWireId 
+        : selectedWireIds.first;
+    final wire = wires.firstWhere((w) => w.id == wireId);
+    
     final startPos = getPortPosition(wire.start);
     final endPos = getPortPosition(wire.end);
     if (startPos == null || endPos == null) return;

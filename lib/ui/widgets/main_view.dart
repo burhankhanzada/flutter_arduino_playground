@@ -8,7 +8,7 @@ import 'package:flutter_arduino_playground/ui/widgets/activity_bar.dart';
 
 class LeftPanelRatioNotifier extends Notifier<double> {
   @override
-  double build() => 0.5;
+  double build() => 0.4;
 
   void updateRatio(double ratio) {
     state = ratio;

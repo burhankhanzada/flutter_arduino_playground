@@ -14,18 +14,12 @@ class RightPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workspaceController = ref.watch(workspaceControllerProvider);
 
-    return Column(
+    return Stack(
       children: [
-        Toolbar(),
-        Expanded(
-          child: Stack(
-            children: [
-              CanvasArea(controller: workspaceController.canvasController),
-              const SimulationControls(),
-              const ZoomControls(),
-            ],
-          ),
-        ),
+        CanvasArea(controller: workspaceController.canvasController),
+        const SimulationControls(),
+        const Toolbar(),
+        const ZoomControls(),
       ],
     );
   }

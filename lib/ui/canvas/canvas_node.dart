@@ -51,6 +51,14 @@ class CanvasNode extends StatelessWidget {
       properties: node.properties,
     );
 
+    final outlineComponent = ComponentWidget(
+      componentModel: node.componentModel,
+      hoveredLocalPosition: node.hoveredLocalPosition,
+      breadboardHover: node.breadboardHover,
+      properties: node.properties,
+      isOutline: true,
+    );
+
     return RepaintBoundary(
       child: SizedBox(
         width: node.currentSize.width,
@@ -72,7 +80,7 @@ class CanvasNode extends StatelessWidget {
                     children: [
                       if (isSelected)
                         ..._generateSmoothOutline(
-                          baseComponent,
+                          outlineComponent,
                           primaryColor,
                           2.0,
                         ),

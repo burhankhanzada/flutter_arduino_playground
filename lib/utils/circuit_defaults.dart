@@ -47,10 +47,40 @@ Circuit(
 )
 ''',
       ),
+      ProjectTemplate(
+        name: "Breadboard",
+        cppCode: '''
+void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  Serial.println("Hello World");
+  digitalWrite(13, HIGH);
+  delay(500);
+  
+  digitalWrite(13, LOW);
+  delay(500);
+}
+''',
+        diagramCode: '''
+Circuit(
+  parts: [
+    Part(type: 'Breadboard Half', id: 'part1', x: -380.0, y: -310.0),
+    Part(type: 'Arduino Uno', id: 'uno', x: -320.0, y: -230.0),
+    Part(type: 'LED', id: 'led1', x: -150.0, y: -330.0, properties: {'Color': 'Red'}),
+  ],
+  wires: [
+    Wire(from: 'part1:sig_right_g_1', to: 'uno:GND_1', color: 'black'),
+    Wire(from: 'part1:sig_right_h_1', to: 'uno:13', color: 'red'),
+  ]
+)
+''',
+      ),
     ];
   }
 
   static ProjectTemplate getBlinkExample() {
-    return getTemplates().firstWhere((t) => t.name == 'Blink');
+    return getTemplates().firstWhere((t) => t.name == 'Breadboard');
   }
 }

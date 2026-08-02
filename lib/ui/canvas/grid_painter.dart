@@ -9,6 +9,8 @@ class GridPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (!controller.showGrid) return;
+
     final double s = controller.scale;
 
     // Get visible bounds in canvas space by mapping screen corners

@@ -14,98 +14,102 @@ class Toolbar extends ConsumerWidget {
     final workspaceController = ref.watch(workspaceControllerProvider);
     final controller = workspaceController.canvasController;
 
-    return Container(
-      height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ListenableBuilder(
-          listenable: controller,
-          builder: (context, _) {
-            final hasNodeSelection = controller.selectedNodes.isNotEmpty;
-            final hasSelection =
-                hasNodeSelection || controller.selectedWireId != null;
-            return Row(
-              children: [
-                IconButton(
-                  onPressed: hasNodeSelection ? () => controller.copy() : null,
-                  icon: const Icon(Icons.copy),
-                  tooltip: 'Copy',
-                ),
-                IconButton(
-                  onPressed: () => controller.paste(),
-                  icon: const Icon(Icons.paste),
-                  tooltip: 'Paste',
-                ),
-                IconButton(
-                  onPressed: hasSelection ? () => controller.remove() : null,
-                  icon: const Icon(Icons.delete_outline),
-                  tooltip: 'Delete',
-                ),
-                const VerticalDivider(),
-                IconButton(
-                  onPressed: () => controller.undo(),
-                  icon: const Icon(Icons.undo),
-                  tooltip: 'Undo',
-                ),
-                IconButton(
-                  onPressed: () => controller.redo(),
-                  icon: const Icon(Icons.redo),
-                  tooltip: 'Redo',
-                ),
-                const VerticalDivider(),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.rotateLeft()
-                      : null,
-                  icon: const Icon(Icons.rotate_left),
-                  tooltip: 'Rotate Left',
-                ),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.rotateRight()
-                      : null,
-                  icon: const Icon(Icons.rotate_right),
-                  tooltip: 'Rotate Right',
-                ),
-                const VerticalDivider(),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.flipHorizontal()
-                      : null,
-                  icon: const Icon(Icons.flip),
-                  tooltip: 'Flip Horizontal',
-                ),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.flipVertical()
-                      : null,
-                  icon: Transform.rotate(
-                    angle: math.pi * 1 / 2,
-                    child: const Icon(Icons.flip),
+    return Align(
+      alignment: AlignmentGeometry.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Card(
+          child: ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) {
+              final hasNodeSelection = controller.selectedNodes.isNotEmpty;
+              final hasSelection = hasNodeSelection || controller.selectedWireIds.isNotEmpty;
+              return IntrinsicHeight(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.copy()
+                        : null,
+                    icon: const Icon(Icons.copy),
+                    tooltip: 'Copy',
                   ),
-                  tooltip: 'Flip Vertical',
-                ),
-                const VerticalDivider(),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.layerUp()
-                      : null,
-                  icon: const Icon(Icons.arrow_upward),
-                  tooltip: 'Layer Up',
-                ),
-                IconButton(
-                  onPressed: hasNodeSelection
-                      ? () => controller.layerDown()
-                      : null,
-                  icon: const Icon(Icons.arrow_downward),
-                  tooltip: 'Layer Down',
-                ),
-                const VerticalDivider(),
-                WireColorDropDownMenu(controller: controller),
-              ],
-            );
-          },
+                  IconButton(
+                    onPressed: () => controller.paste(),
+                    icon: const Icon(Icons.paste),
+                    tooltip: 'Paste',
+                  ),
+                  IconButton(
+                    onPressed: hasSelection ? () => controller.remove() : null,
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Delete',
+                  ),
+                  const VerticalDivider(),
+                  IconButton(
+                    onPressed: () => controller.undo(),
+                    icon: const Icon(Icons.undo),
+                    tooltip: 'Undo',
+                  ),
+                  IconButton(
+                    onPressed: () => controller.redo(),
+                    icon: const Icon(Icons.redo),
+                    tooltip: 'Redo',
+                  ),
+                  const VerticalDivider(),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.rotateLeft()
+                        : null,
+                    icon: const Icon(Icons.rotate_left),
+                    tooltip: 'Rotate Left',
+                  ),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.rotateRight()
+                        : null,
+                    icon: const Icon(Icons.rotate_right),
+                    tooltip: 'Rotate Right',
+                  ),
+                  const VerticalDivider(),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.flipHorizontal()
+                        : null,
+                    icon: const Icon(Icons.flip),
+                    tooltip: 'Flip Horizontal',
+                  ),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.flipVertical()
+                        : null,
+                    icon: Transform.rotate(
+                      angle: math.pi * 1 / 2,
+                      child: const Icon(Icons.flip),
+                    ),
+                    tooltip: 'Flip Vertical',
+                  ),
+                  const VerticalDivider(),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.layerUp()
+                        : null,
+                    icon: const Icon(Icons.arrow_upward),
+                    tooltip: 'Layer Up',
+                  ),
+                  IconButton(
+                    onPressed: hasNodeSelection
+                        ? () => controller.layerDown()
+                        : null,
+                    icon: const Icon(Icons.arrow_downward),
+                    tooltip: 'Layer Down',
+                  ),
+                  const VerticalDivider(),
+                  WireColorDropDownMenu(controller: controller),
+                ],
+              ));
+            },
+          ),
         ),
       ),
     );

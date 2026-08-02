@@ -10,7 +10,7 @@ class WirePainter extends CustomPainter {
   final Offset? pendingEndMouse;
   final PortLocation? hoveredPort;
   final String? hoveredWireId;
-  final String? selectedWireId;
+  final List<String> selectedWireIds;
   final Color pendingColor;
   final Color selectionColor;
 
@@ -21,7 +21,7 @@ class WirePainter extends CustomPainter {
     this.pendingEndMouse,
     this.hoveredPort,
     this.hoveredWireId,
-    this.selectedWireId,
+    this.selectedWireIds = const [],
     this.selectionColor = Colors.blue,
     this.pendingColor = Colors.yellow,
   });
@@ -40,8 +40,8 @@ class WirePainter extends CustomPainter {
 
       if (startPos != null && endPos != null) {
         final isHovered = wire.id == hoveredWireId;
-        final isSelected = wire.id == selectedWireId;
-
+        final isSelected = selectedWireIds.contains(wire.id);
+        
         paint.color = wire.color;
         if (isSelected || isHovered) {
           paint.strokeWidth = 4.0;

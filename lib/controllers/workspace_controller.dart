@@ -112,10 +112,8 @@ class WorkspaceController {
               }
             }
           }
-        } else if (canvasController.selectedWireId != null) {
-          final wire = canvasController.wires
-              .where((w) => w.id == canvasController.selectedWireId)
-              .firstOrNull;
+        } else if (canvasController.selectedWireIds.isNotEmpty) {
+          final wire = canvasController.wires.where((w) => w.id == canvasController.selectedWireIds.first).firstOrNull;
           if (wire != null) {
             final fromId = outNodeIdMap[wire.start.nodeKey];
             final toId = outNodeIdMap[wire.end.nodeKey];

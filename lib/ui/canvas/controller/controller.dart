@@ -92,9 +92,7 @@ class CanvasController extends BaseCanvasController
       selectedNodes[i] = nodes.firstWhere((n) => n.key == selectedNodes[i].key);
     }
 
-    if (selectedWireId != null && !wires.any((w) => w.id == selectedWireId)) {
-      selectedWireId = null;
-    }
+    selectedWireIds.removeWhere((id) => !wires.any((w) => w.id == id));
     notifyListeners();
   }
 
@@ -135,9 +133,12 @@ class CanvasController extends BaseCanvasController
 
   void remove() {
     saveHistory();
-    if (selectedWireId != null) {
-      removeWire(selectedWireId!);
-    } else if (selectedNodes.isNotEmpty) {
+    for (final id in selectedWireIds.toList()) {
+      removeWire(id);
+    }
+    selectedWireIds.clear();
+    
+    if (selectedNodes.isNotEmpty) {
       for (final node in selectedNodes) {
         wires.removeWhere(
           (w) =>
@@ -223,16 +224,21 @@ class CanvasController extends BaseCanvasController
 
   @override
   void createBendPointAt(Offset canvasPosition) {
-    if (selectedWireId != null) {
-      saveHistory();
-    }
+    saveHistory();
     super.createBendPointAt(canvasPosition);
   }
 
   @override
   void updateWireColor(Color? newColor) {
-    if (newColor != null && selectedWireId != null) {
-      saveHistory();
+    if (newColor != null && selectedWireIds.isNotEmpty) {
+      for (final id in selectedWireIds) {
+        final wireIndex = wires.indexWhere((w) => w.id == id);
+        if (wireIndex != -1) {
+          final wire = wires[wireIndex];
+          wires[wireIndex] = wire.copyWith(color: newColor);
+        }
+      }
+      return;
     }
     super.updateWireColor(newColor);
   }
@@ -363,8 +369,30 @@ class CanvasController extends BaseCanvasController
           selectedNodes.add(node);
         }
       }
+
+      selectedWireIds.clear();
+      for (final wire in wires) {
+        if (_wireOverlapsRect(wire, boxSelectionRect!)) {
+          selectedWireIds.add(wire.id);
+        }
+      }
+
       notifyListeners();
     }
+  }
+
+  bool _wireOverlapsRect(WireModel wire, Rect rect) {
+    final startPos = getPortPosition(wire.start);
+    final endPos = getPortPosition(wire.end);
+    if (startPos == null || endPos == null) return false;
+
+    final List<Offset> points = [startPos, ...wire.bendPoints, endPos];
+    for (int i = 0; i < points.length - 1; i++) {
+      if (rect.overlaps(Rect.fromPoints(points[i], points[i + 1]))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void endBoxSelection() {

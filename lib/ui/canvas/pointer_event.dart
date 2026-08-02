@@ -156,7 +156,7 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
     // 3. Check Wire interaction (Selection and Bending)
     if (controller.hoveredWireId != null) {
       controller.checkSelection();
-      if (controller.selectedWireId == controller.hoveredWireId) {
+      if (controller.hoveredWireId != null && controller.selectedWireIds.contains(controller.hoveredWireId)) {
         controller.startDraggingBendPoint(canvasPos);
         return;
       }
@@ -164,11 +164,10 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
 
     // 4. Fallback to Node interaction
     controller.checkSelection();
-
-    // If a wire was just selected (or already selected) and we missed it in step 2 (edge case)
-    if (controller.selectedWireId != null && !controller.isDraggingBendPoint) {
+    
+    if (controller.selectedWireIds.isNotEmpty && !controller.isDraggingBendPoint) {
       controller.startDraggingBendPoint(canvasPos);
-    } else if (controller.selectedNodes.isEmpty && controller.selectedWireId == null) {
+    } else if (controller.selectedNodes.isEmpty && controller.selectedWireIds.isEmpty) {
       // Clicked on empty space
       _isBoxSelecting = true;
       controller.startBoxSelection(canvasPos);

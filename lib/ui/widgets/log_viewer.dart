@@ -9,6 +9,12 @@ class LogViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (logs.isEmpty) {
+      return const Center(
+        child: Text('No output', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(8),
       itemCount: logs.length,

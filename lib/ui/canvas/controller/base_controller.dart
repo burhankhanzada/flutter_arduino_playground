@@ -23,6 +23,12 @@ class BaseCanvasController extends ChangeNotifier {
 
   double get gridCellSize => GridSystem.cellSize;
   bool snapToGrid = true;
+  bool showGrid = true;
+
+  void toggleGrid() {
+    showGrid = !showGrid;
+    notifyListeners();
+  }
 
   double minScale = 0.4;
   double maxScale = 4.0;

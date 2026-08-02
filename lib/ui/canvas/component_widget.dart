@@ -10,6 +10,7 @@ class ComponentWidget extends StatelessWidget {
   final Offset? hoveredLocalPosition;
   final BreadboardHoverState? breadboardHover;
   final Map<String, dynamic>? properties;
+  final bool isOutline;
 
   const ComponentWidget({
     super.key,
@@ -17,6 +18,7 @@ class ComponentWidget extends StatelessWidget {
     this.hoveredLocalPosition,
     this.breadboardHover,
     this.properties,
+    this.isOutline = false,
   });
 
   @override
@@ -36,6 +38,10 @@ class ComponentWidget extends StatelessWidget {
       if (properties!.containsKey('Color')) {
         painter.color = _getColorFromString(properties!['Color']);
       }
+    }
+
+    if (painter is LEDPainter && isOutline) {
+      return CustomPaint(size: componentModel.size, painter: LEDOutlinePainter(painter));
     }
 
     return CustomPaint(size: componentModel.size, painter: painter);
