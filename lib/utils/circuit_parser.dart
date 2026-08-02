@@ -12,43 +12,31 @@ class CircuitParser {
     final parts = <PartData>[];
     final wires = <WireData>[];
 
-    // Parser for Part(type: '...', id: '...', x: ..., y: ..., rotate: ..., flipHorizontal: ..., flipVertical: ...)
-    final partRegex = RegExp(r"Part\(([^)]+)\)");
+    // Simple regex parser for Part
+    final partRegex = RegExp(r"Part\(\s*type:\s*'([^']+)'\s*,\s*id:\s*'([^']+)'\s*,\s*x:\s*([-\d.]+)\s*,\s*y:\s*([-\d.]+)\s*(?:,\s*properties:\s*\{([^}]*)\})?\s*\)");
     for (final match in partRegex.allMatches(code)) {
-      final body = match.group(1)!;
-
-      final typeMatch = RegExp(r"type:\s*'([^']+)'").firstMatch(body);
-      final idMatch = RegExp(r"id:\s*'([^']+)'").firstMatch(body);
-      final xMatch = RegExp(r"x:\s*([-\d.]+)").firstMatch(body);
-      final yMatch = RegExp(r"y:\s*([-\d.]+)").firstMatch(body);
-      final colorMatch = RegExp(r"color:\s*'([^']+)'").firstMatch(body);
-      final rotateMatch = RegExp(
-        r"(?:rotate|rotationAngle):\s*([-\d.]+)",
-      ).firstMatch(body);
-      final flipHMatch = RegExp(
-        r"flipHorizontal:\s*(true|false)",
-      ).firstMatch(body);
-      final flipVMatch = RegExp(
-        r"flipVertical:\s*(true|false)",
-      ).firstMatch(body);
-
-      if (typeMatch != null &&
-          idMatch != null &&
-          xMatch != null &&
-          yMatch != null) {
-        parts.add(
-          PartData(
-            type: typeMatch.group(1)!,
-            id: idMatch.group(1)!,
-            x: double.tryParse(xMatch.group(1)!) ?? 0,
-            y: double.tryParse(yMatch.group(1)!) ?? 0,
-            color: colorMatch?.group(1),
-            rotate: double.tryParse(rotateMatch?.group(1) ?? '') ?? 0.0,
-            flipHorizontal: flipHMatch?.group(1) == 'true',
-            flipVertical: flipVMatch?.group(1) == 'true',
-          ),
-        );
+      final propsStr = match.group(5);
+      Map<String, dynamic>? properties;
+      if (propsStr != null && propsStr.trim().isNotEmpty) {
+        properties = {};
+        final pairs = propsStr.split(',');
+        for (final pair in pairs) {
+          final kv = pair.split(':');
+          if (kv.length == 2) {
+            final key = kv[0].replaceAll("'", "").trim();
+            final value = kv[1].replaceAll("'", "").trim();
+            properties[key] = value;
+          }
+        }
       }
+
+      parts.add(PartData(
+        type: match.group(1)!,
+        id: match.group(2)!,
+        x: double.tryParse(match.group(3)!) ?? 0,
+        y: double.tryParse(match.group(4)!) ?? 0,
+        properties: properties,
+      ));
     }
 
     // Regex for Wire
@@ -129,32 +117,13 @@ class CircuitParser {
       idMap[node.key] = id;
       if (outNodeIdMap != null) outNodeIdMap[node.key] = id;
 
-      final extraProps = <String>[];
-      if (node.componentModel.name == 'LED' &&
-          node.componentModel.painter is LEDPainter) {
-        final ledPainter = node.componentModel.painter as LEDPainter;
-        final colorName = _colorToName(ledPainter.color);
-        extraProps.add("color: '$colorName'");
-      }
-      if (node.rotationAngle != 0.0) {
-        final formattedAngle = double.parse(
-          node.rotationAngle.toStringAsFixed(4),
-        );
-        extraProps.add('rotate: $formattedAngle');
-      }
-      if (node.flipHorizontal) {
-        extraProps.add('flipHorizontal: true');
-      }
-      if (node.flipVertical) {
-        extraProps.add('flipVertical: true');
+      String propsStr = '';
+      if (node.properties.isNotEmpty) {
+        final propsList = node.properties.entries.map((e) => "'${e.key}': '${e.value}'").join(', ');
+        propsStr = ', properties: {$propsList}';
       }
 
-      final extraStr = extraProps.isNotEmpty
-          ? ', ${extraProps.join(', ')}'
-          : '';
-      buffer.writeln(
-        '    Part(type: \'${node.componentModel.name}\', id: \'$id\', x: ${node.position.dx}, y: ${node.position.dy}$extraStr),',
-      );
+      buffer.writeln('    Part(type: \'${node.componentModel.name}\', id: \'$id\', x: ${node.position.dx}, y: ${node.position.dy}$propsStr),');
     }
     buffer.writeln('  ],');
     buffer.writeln('  wires: [');
@@ -236,25 +205,21 @@ class CircuitParser {
         final componentModel = components
             .firstWhere((c) => c.name == part.type)
             .clone();
-        if (componentModel.painter is LEDPainter && part.color != null) {
+        if (componentModel.painter is LEDPainter && part.properties?['color'] != null) {
           (componentModel.painter as LEDPainter).color = _nameToColor(
-            part.color!,
+            part.properties!['color']!,
           );
         }
 
         final key = UniqueKey();
         idToKey[part.id] = key;
-
-        outNodes.add(
-          CanvasNodeModel(
-            key: key,
-            position: Offset(part.x, part.y),
-            componentModel: componentModel,
-            rotationAngle: part.rotate,
-            flipHorizontal: part.flipHorizontal,
-            flipVertical: part.flipVertical,
-          ),
-        );
+        
+        outNodes.add(CanvasNodeModel(
+          key: key,
+          position: Offset(part.x, part.y),
+          componentModel: componentModel,
+          properties: part.properties,
+        ));
       } catch (_) {
         // Component type not found
       }

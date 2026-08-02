@@ -5,20 +5,14 @@ class PartData {
   final String id;
   final double x;
   final double y;
-  final String? color;
-  final double rotate;
-  final bool flipHorizontal;
-  final bool flipVertical;
+  final Map<String, dynamic>? properties;
 
   PartData({
     required this.type,
     required this.id,
     required this.x,
     required this.y,
-    this.color,
-    this.rotate = 0.0,
-    this.flipHorizontal = false,
-    this.flipVertical = false,
+    this.properties,
   });
 }
 

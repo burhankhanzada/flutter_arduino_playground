@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -22,9 +22,9 @@ class CanvasNode extends StatelessWidget {
     final List<Widget> shadows = [];
 
     for (int i = 0; i < numSamples; i++) {
-      final double angle = (i / numSamples) * 2 * math.pi;
-      final double dx = math.cos(angle) * thickness;
-      final double dy = math.sin(angle) * thickness;
+      final double angle = (i / numSamples) * 2 * pi;
+      final double dx = cos(angle) * thickness;
+      final double dy = sin(angle) * thickness;
 
       shadows.add(
         Positioned(
@@ -48,6 +48,7 @@ class CanvasNode extends StatelessWidget {
       componentModel: node.componentModel,
       hoveredLocalPosition: node.hoveredLocalPosition,
       breadboardHover: node.breadboardHover,
+      properties: node.properties,
     );
 
     return RepaintBoundary(

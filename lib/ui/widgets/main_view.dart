@@ -1,17 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:flutter_arduino_playground/ui/home_page.dart';
 import 'package:flutter_arduino_playground/ui/panels/left_panel.dart';
 import 'package:flutter_arduino_playground/ui/panels/right_panel.dart';
 import 'package:flutter_arduino_playground/ui/widgets/drag_handle.dart';
+import 'package:flutter_arduino_playground/ui/widgets/activity_bar.dart';
+
+class LeftPanelRatioNotifier extends Notifier<double> {
+  @override
+  double build() => 0.5;
+
+  void updateRatio(double ratio) {
+    state = ratio;
+  }
+}
 
 final leftPanelRatioProvider = NotifierProvider<LeftPanelRatioNotifier, double>(
   LeftPanelRatioNotifier.new,
 );
 
-class MainWorkspace extends ConsumerWidget {
-  const MainWorkspace({super.key});
+class MainView extends ConsumerWidget {
+  const MainView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,8 +28,9 @@ class MainWorkspace extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final totalWidth = constraints.maxWidth;
-        // 8 pixels for the drag handle
+        // Activity bar is 48px wide, so subtract that from total width
+        final totalWidth = constraints.maxWidth - 48;
+        
         final leftWidth = (totalWidth * leftPanelRatio).clamp(
           100.0,
           totalWidth - 100.0,
@@ -29,6 +39,7 @@ class MainWorkspace extends ConsumerWidget {
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const ActivityBar(),
             SizedBox(width: leftWidth, child: const LeftPanel()),
             DragHandle(
               direction: Axis.horizontal,

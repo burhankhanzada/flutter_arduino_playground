@@ -35,8 +35,8 @@ void loop() {
 Circuit(
   parts: [
     Part(type: 'Arduino Uno', id: 'uno', x: -150.0, y: -50.0),
-    Part(type: 'LED', id: 'led1', x: 70.0, y: -180.0),
-    Part(type: 'LED', id: 'led2', x: 160.0, y: -180.0),
+    Part(type: 'LED', id: 'led1', x: 70.0, y: -180.0, properties: {'Color': 'Red'}),
+    Part(type: 'LED', id: 'led2', x: 160.0, y: -180.0, properties: {'Color': 'Green'}),
   ],
   wires: [
     Wire(from: 'led2:cathode', to: 'uno:2', color: 'green'),

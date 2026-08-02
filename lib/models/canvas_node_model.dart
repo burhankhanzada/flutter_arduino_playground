@@ -14,10 +14,22 @@ class CanvasNodeModel {
     this.rotationAngle = 0.0,
     this.flipHorizontal = false,
     this.flipVertical = false,
+    Map<String, dynamic>? properties,
     LocalKey? key,
-  }) : key = key ?? UniqueKey();
+  }) : key = key ?? UniqueKey(),
+       properties = properties ?? _getDefaultProperties(componentModel.name);
+
+  static Map<String, dynamic> _getDefaultProperties(String componentName) {
+    if (componentName.toLowerCase().contains('led')) {
+      return {'Color': 'Red'};
+    } else if (componentName.toLowerCase().contains('resistor')) {
+      return {'Resistance': '220 Ω'};
+    }
+    return {};
+  }
 
   Offset position;
+  Map<String, dynamic> properties;
   Offset? hoveredLocalPosition;
   BreadboardHoverState? breadboardHover;
   double rotationAngle;
@@ -119,6 +131,7 @@ class CanvasNodeModel {
     double? rotationAngle,
     bool? flipHorizontal,
     bool? flipVertical,
+    Map<String, dynamic>? properties,
     LocalKey? key,
   }) {
     final newNode = CanvasNodeModel(
@@ -127,6 +140,7 @@ class CanvasNodeModel {
       rotationAngle: rotationAngle ?? this.rotationAngle,
       flipHorizontal: flipHorizontal ?? this.flipHorizontal,
       flipVertical: flipVertical ?? this.flipVertical,
+      properties: properties ?? Map.from(this.properties),
       key: key ?? this.key,
     );
     newNode.hoveredLocalPosition =

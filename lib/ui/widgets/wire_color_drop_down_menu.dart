@@ -1,7 +1,31 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
-import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
+
+const colorWheel = [
+  Colors.red,
+  Colors.pink,
+  Colors.purple,
+  Colors.indigo,
+  Colors.blue,
+  Colors.cyan,
+  Colors.teal,
+  Colors.green,
+  Colors.lime,
+  Colors.yellow,
+  Colors.amber,
+  Colors.orange,
+];
+
+const colorsLsit = [
+  ...colorWheel,
+  Colors.brown,
+  Colors.grey,
+  Colors.black,
+  Colors.white,
+];
 
 class WireColorDropDownMenu extends StatefulWidget {
   final CanvasController controller;
@@ -14,31 +38,30 @@ class WireColorDropDownMenu extends StatefulWidget {
 class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
   String selectedColorName = 'Auto';
 
-  final Map<String, Color?> colors = {
+  final Map<String, Color?> colorsMap = {
     'Auto': null,
-    'Black': Colors.black,
-    'Red': Colors.red,
-    'Orange': Colors.orange,
-    'Amber': Colors.amber,
-    'Yellow': Colors.yellow,
-    'Lime': Colors.lime,
-    'Green': Colors.green,
-    'Teal': Colors.teal,
-    'Cyan': Colors.cyan,
-    'Blue': Colors.blue,
-    'Indigo': Colors.indigo,
-    'Purple': Colors.purple,
-    'Pink': Colors.pink,
-    'Brown': Colors.brown,
-    'Grey': Colors.grey,
-    'White': Colors.white,
+    'Red': colorsLsit[0],
+    'Pink': colorsLsit[1],
+    'Purple': colorsLsit[2],
+    'Indigo': colorsLsit[3],
+    'Blue': colorsLsit[4],
+    'Cyan': colorsLsit[5],
+    'Teal': colorsLsit[6],
+    'Green': colorsLsit[7],
+    'Lime': colorsLsit[8],
+    'Yellow': colorsLsit[9],
+    'Amber': colorsLsit[10],
+    'Orange': colorsLsit[11],
+    'Brown': colorsLsit[12],
+    'Grey': colorsLsit[13],
+    'Black': colorsLsit[14],
+    'White': colorsLsit[15],
   };
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_syncColorWithController);
-    // Initial sync
     _syncColorWithController();
   }
 
@@ -61,24 +84,15 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
     final controller = widget.controller;
     Color? targetColor = controller.currentWireColor;
 
-    if (controller.selectedWireId != null) {
-      final wireIndex = controller.wires.indexWhere(
-        (w) => w.id == controller.selectedWireId,
-      );
-      if (wireIndex != -1) {
-        targetColor = controller.wires[wireIndex].color;
-      }
-    } else if (controller.selectedNodeKey != null) {
-      final node = controller.nodes
-          .where((n) => n.key == controller.selectedNodeKey!.key)
-          .firstOrNull;
-      if (node != null && node.componentModel.painter is LEDPainter) {
-        targetColor = (node.componentModel.painter as LEDPainter).color;
-      }
+    final wireIndex = controller.wires.indexWhere(
+      (w) => w.id == controller.selectedWireId,
+    );
+    if (wireIndex != -1) {
+      targetColor = controller.wires[wireIndex].color;
     }
 
     String newName = 'Auto';
-    for (final entry in colors.entries) {
+    for (final entry in colorsMap.entries) {
       if (entry.value?.toARGB32() == targetColor?.toARGB32()) {
         newName = entry.key;
         break;
@@ -92,62 +106,65 @@ class _WireColorDropDownMenuState extends State<WireColorDropDownMenu> {
     }
   }
 
+  Widget _buildColorCircle(MapEntry<String, Color?> entry) {
+    if (entry.key == 'Auto') {
+      return Container(
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: SweepGradient(
+            colors: colorWheel,
+            transform: GradientRotation(-math.pi / 2),
+          ),
+        ),
+      );
+    } else {
+      return CircleAvatar(radius: 10, backgroundColor: entry.value);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: selectedColorName,
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            setState(() {
-              selectedColorName = newValue;
-            });
-            widget.controller.updateWireColor(colors[newValue]);
-          }
-        },
-        items: colors.entries.map((entry) {
-          Widget colorCircle;
-          if (entry.key == 'Auto') {
-            colorCircle = Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: SweepGradient(
-                  colors: [
-                    Colors.red,
-                    Colors.pink,
-                    Colors.purple,
-                    Colors.indigo,
-                    Colors.blue,
-                    Colors.cyan,
-                    Colors.teal,
-                    Colors.green,
-                    Colors.lime,
-                    Colors.yellow,
-                    Colors.amber,
-                    Colors.orange,
-                  ],
-                ),
-              ),
-            );
-          } else {
-            colorCircle = CircleAvatar(
-              radius: 10,
-              backgroundColor: entry.value,
-            );
-          }
+    final selectedEntry = MapEntry(
+      selectedColorName,
+      colorsMap[selectedColorName],
+    );
 
-          return DropdownMenuItem<String>(
+    return PopupMenuButton<String>(
+      constraints: const BoxConstraints(maxHeight: 250),
+      tooltip: 'Wire Color',
+      initialValue: selectedColorName,
+      onSelected: (String newValue) {
+        setState(() {
+          selectedColorName = newValue;
+        });
+        widget.controller.updateWireColor(colorsMap[newValue]);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildColorCircle(selectedEntry),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+      itemBuilder: (BuildContext context) {
+        return colorsMap.entries.map((entry) {
+          return PopupMenuItem<String>(
             value: entry.key,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [colorCircle, Text(entry.key)],
+              children: [
+                _buildColorCircle(entry),
+                const SizedBox(width: 12),
+                Text(entry.key),
+              ],
             ),
           );
-        }).toList(),
-      ),
+        }).toList();
+      },
     );
   }
 }

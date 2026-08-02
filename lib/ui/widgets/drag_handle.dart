@@ -18,16 +18,22 @@ class _DragHandleState extends State<DragHandle> {
   bool _isHovered = false;
   bool _isDragging = false;
 
+  final double hoveredThickness = 4.0;
+  final double normalThickness = 1.0;
+  final double hitAreaSize = 4.0;
+
   @override
   Widget build(BuildContext context) {
     final isHighlighted = _isHovered || _isDragging;
 
     final color = isHighlighted
         ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).scaffoldBackgroundColor;
+        : Theme.of(context).colorScheme.outline;
+
+    final isHorizontal = widget.direction == Axis.horizontal;
 
     return MouseRegion(
-      cursor: widget.direction == Axis.horizontal
+      cursor: isHorizontal
           ? SystemMouseCursors.resizeLeftRight
           : SystemMouseCursors.resizeUpDown,
       onEnter: (_) => setState(() => _isHovered = true),
@@ -38,11 +44,21 @@ class _DragHandleState extends State<DragHandle> {
         onPanEnd: (_) => setState(() => _isDragging = false),
         onPanCancel: () => setState(() => _isDragging = false),
         onPanUpdate: widget.onPanUpdate,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: widget.direction == Axis.horizontal ? 4.0 : null,
-          height: widget.direction == Axis.vertical ? 4.0 : null,
-          color: color,
+        child: SizedBox(
+          width: isHorizontal ? hitAreaSize : double.infinity,
+          height: isHorizontal ? double.infinity : hitAreaSize,
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: isHorizontal
+                  ? (isHighlighted ? hoveredThickness : normalThickness)
+                  : double.infinity,
+              height: isHorizontal
+                  ? double.infinity
+                  : (isHighlighted ? hoveredThickness : normalThickness),
+              color: color,
+            ),
+          ),
         ),
       ),
     );

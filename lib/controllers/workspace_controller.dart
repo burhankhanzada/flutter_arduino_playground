@@ -95,9 +95,9 @@ class WorkspaceController {
         }
 
         CodeLineSelection newSelection = const CodeLineSelection.zero();
-
-        if (canvasController.selectedNodeKey != null) {
-          final id = outNodeIdMap[canvasController.selectedNodeKey!.key];
+        
+        if (canvasController.selectedNodes.isNotEmpty) {
+          final id = outNodeIdMap[canvasController.selectedNodes.first.key];
           if (id != null) {
             final lines = newText.split('\n');
             for (int i = 0; i < lines.length; i++) {

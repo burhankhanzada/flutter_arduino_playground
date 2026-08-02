@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import 'package:flutter_arduino_playground/models/port_model.dart';
@@ -14,8 +12,10 @@ class LEDPainter extends CustomPainter with PortProvider {
   LEDPainter._(this._isOnNotifier, this._colorNotifier)
     : super(repaint: Listenable.merge([_isOnNotifier, _colorNotifier]));
 
-  factory LEDPainter({Color color = Colors.red}) =>
-      LEDPainter._(ValueNotifier<bool>(false), ValueNotifier<Color>(color));
+  factory LEDPainter() => LEDPainter._(
+    ValueNotifier<bool>(false),
+    ValueNotifier<Color>(Colors.redAccent),
+  );
 
   bool get isOn => _isOnNotifier.value;
   set isOn(bool value) => _isOnNotifier.value = value;
@@ -62,40 +62,32 @@ class LEDPainter extends CustomPainter with PortProvider {
     return oldDelegate.isOn != isOn || oldDelegate.color != color;
   }
 
+  @override
+  bool? hitTest(Offset position) {
+    return true; // Accept clicks anywhere within the component bounds
+  }
+
   void _drawBody(Canvas canvas) {
     const topRadius = Radius.circular(15);
     const bottomRadius = Radius.circular(4);
     const innerRadius = Radius.circular(2);
 
+    // We create a darker version for when it's off
     final hsl = HSLColor.fromColor(color);
+    final darkColor = hsl
+        .withLightness((hsl.lightness - 0.2).clamp(0.0, 1.0))
+        .toColor();
+    final highlight = hsl
+        .withLightness((hsl.lightness + 0.2).clamp(0.0, 1.0))
+        .toColor();
 
-    final Color baseColor;
-    final Color highlightColor;
-    final Color glowColor;
-
-    if (isOn) {
-      baseColor = hsl
-          .withSaturation(math.min(1.0, hsl.saturation * 1.1))
-          .withLightness((hsl.lightness * 1.1).clamp(0.4, 0.6))
-          .toColor();
-      highlightColor = Colors.white70;
-      glowColor = hsl
-          .withSaturation(1.0)
-          .withLightness(0.5)
-          .toColor()
-          .withValues(alpha: 0.75);
-    } else {
-      baseColor = hsl.withLightness(hsl.lightness * 0.6).toColor();
-      highlightColor = hsl
-          .withLightness(math.min(1.0, hsl.lightness * 0.9))
-          .toColor();
-      glowColor = Colors.transparent;
-    }
+    final baseColor = isOn ? color : darkColor;
+    final highlightColor = isOn ? Colors.white70 : highlight;
 
     if (isOn) {
       // Draw a glowing effect
       final glowPaint = Paint()
-        ..color = glowColor
+        ..color = color.withValues(alpha: 0.5)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15.0);
       canvas.drawRRect(
         RRect.fromRectAndCorners(

@@ -26,6 +26,7 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   Offset? _startDownPos;
   int _lastClickTime = 0;
   bool _hasSavedHistoryForDrag = false;
+  bool _isBoxSelecting = false;
 
   @override
   void dispose() {
@@ -60,6 +61,10 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
   }
 
   void onPointerCancel(PointerCancelEvent event) {
+    if (_isBoxSelecting) {
+      controller.endBoxSelection();
+      _isBoxSelecting = false;
+    }
     controller.mouseDown = false;
     controller.dragStartOffset = null;
   }
@@ -84,11 +89,10 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
         _hasSavedHistoryForDrag = true;
       }
       controller.updateDraggingBendPoint(canvasPos);
+    } else if (_isBoxSelecting) {
+      controller.updateBoxSelection(canvasPos);
     } else {
-      if (controller.selectedNodeKey != null &&
-          !_hasSavedHistoryForDrag &&
-          _startDownPos != null &&
-          (event.localPosition - _startDownPos!).distance > 2) {
+      if (controller.selectedNodes.isNotEmpty && !_hasSavedHistoryForDrag && _startDownPos != null && (event.localPosition - _startDownPos!).distance > 2) {
         controller.saveHistory();
         _hasSavedHistoryForDrag = true;
       }
@@ -105,6 +109,9 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
       }
     } else if (controller.isDraggingBendPoint) {
       controller.stopDraggingBendPoint();
+    } else if (_isBoxSelecting) {
+      controller.endBoxSelection();
+      _isBoxSelecting = false;
     }
 
     controller.mouseDown = false;
@@ -118,6 +125,7 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
     final canvasPos = controller.screenToCanvasCoordinates(event.localPosition);
     _startDownPos = event.localPosition;
     _hasSavedHistoryForDrag = false;
+    _isBoxSelecting = false;
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final isDoubleClick = (now - _lastClickTime < 300);
@@ -160,6 +168,10 @@ class _CanvasPointerEventState extends State<CanvasPointerEvent> {
     // If a wire was just selected (or already selected) and we missed it in step 2 (edge case)
     if (controller.selectedWireId != null && !controller.isDraggingBendPoint) {
       controller.startDraggingBendPoint(canvasPos);
+    } else if (controller.selectedNodes.isEmpty && controller.selectedWireId == null) {
+      // Clicked on empty space
+      _isBoxSelecting = true;
+      controller.startBoxSelection(canvasPos);
     }
   }
 }

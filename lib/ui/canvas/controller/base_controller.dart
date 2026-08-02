@@ -72,7 +72,10 @@ class BaseCanvasController extends ChangeNotifier {
     notifyListeners();
   }
 
-  CanvasNodeModel? selectedNodeKey;
+  List<CanvasNodeModel> selectedNodes = [];
+  Rect? boxSelectionRect;
+  List<CanvasNodeModel>? clipboardNodes;
+  
   CanvasNodeModel? hoveredNodeKey;
   PortLocation? hoveredPort;
 

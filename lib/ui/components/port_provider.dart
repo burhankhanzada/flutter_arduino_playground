@@ -7,7 +7,7 @@ mixin PortProvider {
 
   ComponentPort? getPortAt(Offset localOffset) {
     for (final port in getPorts()) {
-      if ((port.localOffset - localOffset).distance < 15.0) {
+      if ((port.localOffset - localOffset).distance < 6.0) {
         return port;
       }
     }

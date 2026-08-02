@@ -1,10 +1,12 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/connection_mixin.dart';
-import 'dart:math' as math;
 import 'package:flutter_arduino_playground/ui/canvas/controller/select_mixin.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
 
 class CanvasStateSnapshot {
@@ -15,10 +17,9 @@ class CanvasStateSnapshot {
 
 class CanvasController extends BaseCanvasController
     with ConnectionMixin, SelectMixin {
-  bool get canvasMoveEnabled => !mouseDown;
+  bool get canvasMoveEnabled => !mouseDown && boxSelectionRect == null;
 
-  CanvasNodeModel? _clipboardNode;
-  final List<CanvasStateSnapshot> _undoStack = [];
+    final List<CanvasStateSnapshot> _undoStack = [];
   final List<CanvasStateSnapshot> _redoStack = [];
 
   CanvasController({
@@ -86,11 +87,9 @@ class CanvasController extends BaseCanvasController
       ),
     );
 
-    if (selectedNodeKey != null &&
-        !nodes.any((n) => n.key == selectedNodeKey!.key)) {
-      selectedNodeKey = null;
-    } else if (selectedNodeKey != null) {
-      selectedNodeKey = nodes.firstWhere((n) => n.key == selectedNodeKey!.key);
+    selectedNodes.removeWhere((n) => !nodes.any((node) => node.key == n.key));
+    for (int i = 0; i < selectedNodes.length; i++) {
+      selectedNodes[i] = nodes.firstWhere((n) => n.key == selectedNodes[i].key);
     }
 
     if (selectedWireId != null && !wires.any((w) => w.id == selectedWireId)) {
@@ -100,20 +99,29 @@ class CanvasController extends BaseCanvasController
   }
 
   void copy() {
-    if (selectedNodeKey != null) {
-      _clipboardNode = selectedNodeKey!.copyWith();
+    if (selectedNodes.isNotEmpty) {
+      clipboardNodes = selectedNodes.map((n) => n.copyWith()).toList();
     }
   }
 
   void paste() {
-    if (_clipboardNode != null) {
+    if (clipboardNodes != null && clipboardNodes!.isNotEmpty) {
       saveHistory();
-      final newNode = _clipboardNode!.copyWith(
-        key: UniqueKey(),
-        position: _clipboardNode!.position + const Offset(20, 20),
-      );
-      nodes.add(newNode);
-      selectedNodeKey = newNode;
+      selectedNodes.clear();
+      
+      for (final node in clipboardNodes!) {
+        final newNode = node.copyWith(
+          key: UniqueKey(),
+          position: node.position + const Offset(20, 20),
+        );
+        nodes.add(newNode);
+        selectedNodes.add(newNode);
+      }
+      
+      clipboardNodes = clipboardNodes!.map((n) => n.copyWith(
+        position: n.position + const Offset(20, 20),
+      )).toList();
+      
       notifyListeners();
     }
   }
@@ -121,7 +129,7 @@ class CanvasController extends BaseCanvasController
   void add(CanvasNodeModel child) {
     saveHistory();
     nodes.add(child);
-    selectedNodeKey = child;
+    selectedNodes = [child];
     notifyListeners();
   }
 
@@ -129,18 +137,32 @@ class CanvasController extends BaseCanvasController
     saveHistory();
     if (selectedWireId != null) {
       removeWire(selectedWireId!);
-    } else if (selectedNodeKey != null) {
-      // Remove any wires connected to this node
-      wires.removeWhere(
-        (w) =>
-            w.start.nodeKey == selectedNodeKey!.key ||
-            w.end.nodeKey == selectedNodeKey!.key,
-      );
-
-      nodes.removeWhere((node) => node.key == selectedNodeKey!.key);
+    } else if (selectedNodes.isNotEmpty) {
+      for (final node in selectedNodes) {
+        wires.removeWhere(
+          (w) =>
+              w.start.nodeKey == node.key ||
+              w.end.nodeKey == node.key,
+        );
+        nodes.removeWhere((n) => n.key == node.key);
+      }
       clearSelection();
     }
     notifyListeners();
+  }
+
+  void updateNodeProperties(LocalKey key, Map<String, dynamic> newProperties) {
+    final index = nodes.indexWhere((n) => n.key == key);
+    if (index != -1) {
+      saveHistory();
+      nodes[index] = nodes[index].copyWith(properties: newProperties);
+      
+      final selIndex = selectedNodes.indexWhere((n) => n.key == key);
+      if (selIndex != -1) {
+        selectedNodes[selIndex] = nodes[index];
+      }
+      notifyListeners();
+    }
   }
 
   void fitToContent(Size viewportSize) {
@@ -216,104 +238,141 @@ class CanvasController extends BaseCanvasController
   }
 
   void rotateRight() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
+    for (int i = 0; i < selectedNodes.length; i++) {
+      final oldNode = selectedNodes[i];
+      final index = nodes.indexOf(oldNode);
+      if (index == -1) continue;
 
-    final oldNode = selectedNodeKey!;
-    final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
+      final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
+      final updatedNode = oldNode.copyWith(
+        rotationAngle: oldNode.rotationAngle + (math.pi / 18),
+      );
+      final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
+      final finalNode = updatedNode.copyWith(position: newPosition);
 
-    final updatedNode = oldNode.copyWith(
-      rotationAngle: oldNode.rotationAngle + (math.pi / 18),
-    );
-
-    final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
-    final finalNode = updatedNode.copyWith(position: newPosition);
-
-    selectedNodeKey = finalNode;
-    nodes[index] = finalNode;
-    _updateConnectedWires(finalNode.key);
+      selectedNodes[i] = finalNode;
+      nodes[index] = finalNode;
+      _updateConnectedWires(finalNode.key);
+    }
     notifyListeners();
   }
 
   void rotateLeft() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
+    for (int i = 0; i < selectedNodes.length; i++) {
+      final oldNode = selectedNodes[i];
+      final index = nodes.indexOf(oldNode);
+      if (index == -1) continue;
 
-    final oldNode = selectedNodeKey!;
-    final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
+      final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
+      final updatedNode = oldNode.copyWith(
+        rotationAngle: oldNode.rotationAngle - (math.pi / 18),
+      );
+      final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
+      final finalNode = updatedNode.copyWith(position: newPosition);
 
-    final updatedNode = oldNode.copyWith(
-      rotationAngle: oldNode.rotationAngle - (math.pi / 18),
-    );
-
-    final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
-    final finalNode = updatedNode.copyWith(position: newPosition);
-
-    selectedNodeKey = finalNode;
-    nodes[index] = finalNode;
-    _updateConnectedWires(finalNode.key);
+      selectedNodes[i] = finalNode;
+      nodes[index] = finalNode;
+      _updateConnectedWires(finalNode.key);
+    }
     notifyListeners();
   }
 
   void flipHorizontal() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
+    for (int i = 0; i < selectedNodes.length; i++) {
+      final oldNode = selectedNodes[i];
+      final index = nodes.indexOf(oldNode);
+      if (index == -1) continue;
 
-    final updatedNode = selectedNodeKey!.copyWith(
-      flipHorizontal: !selectedNodeKey!.flipHorizontal,
-    );
-    selectedNodeKey = updatedNode;
-    nodes[index] = updatedNode;
-    _updateConnectedWires(updatedNode.key);
+      final updatedNode = oldNode.copyWith(
+        flipHorizontal: !oldNode.flipHorizontal,
+      );
+      selectedNodes[i] = updatedNode;
+      nodes[index] = updatedNode;
+      _updateConnectedWires(updatedNode.key);
+    }
     notifyListeners();
   }
 
   void flipVertical() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
+    for (int i = 0; i < selectedNodes.length; i++) {
+      final oldNode = selectedNodes[i];
+      final index = nodes.indexOf(oldNode);
+      if (index == -1) continue;
 
-    final updatedNode = selectedNodeKey!.copyWith(
-      flipVertical: !selectedNodeKey!.flipVertical,
-    );
-    selectedNodeKey = updatedNode;
-    nodes[index] = updatedNode;
-    _updateConnectedWires(updatedNode.key);
+      final updatedNode = oldNode.copyWith(
+        flipVertical: !oldNode.flipVertical,
+      );
+      selectedNodes[i] = updatedNode;
+      nodes[index] = updatedNode;
+      _updateConnectedWires(updatedNode.key);
+    }
     notifyListeners();
   }
 
   void layerUp() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1 || index == nodes.length - 1) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
-    final node = nodes.removeAt(index);
-    nodes.insert(index + 1, node);
+    // Sort selected nodes by index descending so we don't mess up order
+    var sorted = List<CanvasNodeModel>.from(selectedNodes)..sort((a, b) => nodes.indexOf(b).compareTo(nodes.indexOf(a)));
+    for (final oldNode in sorted) {
+      final index = nodes.indexOf(oldNode);
+      if (index == -1 || index == nodes.length - 1) continue;
+      final node = nodes.removeAt(index);
+      nodes.insert(index + 1, node);
+    }
     notifyListeners();
   }
 
   void layerDown() {
-    if (selectedNodeKey == null) return;
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1 || index == 0) return;
-
+    if (selectedNodes.isEmpty) return;
     saveHistory();
-    final node = nodes.removeAt(index);
-    nodes.insert(index - 1, node);
+    // Sort selected nodes by index ascending
+    var sorted = List<CanvasNodeModel>.from(selectedNodes)..sort((a, b) => nodes.indexOf(a).compareTo(nodes.indexOf(b)));
+    for (final oldNode in sorted) {
+      final index = nodes.indexOf(oldNode);
+      if (index == -1 || index == 0) continue;
+      final node = nodes.removeAt(index);
+      nodes.insert(index - 1, node);
+    }
     notifyListeners();
   }
+
+  Offset? _boxSelectionStart;
+
+  void startBoxSelection(Offset canvasPos) {
+    _boxSelectionStart = canvasPos;
+    boxSelectionRect = Rect.fromPoints(canvasPos, canvasPos);
+    clearSelection();
+  }
+
+  void updateBoxSelection(Offset canvasPos) {
+    if (_boxSelectionStart != null) {
+      boxSelectionRect = Rect.fromPoints(_boxSelectionStart!, canvasPos);
+      
+      selectedNodes.clear();
+      for (final node in nodes) {
+        if (boxSelectionRect!.overlaps(node.rect)) {
+          selectedNodes.add(node);
+        }
+      }
+      notifyListeners();
+    }
+  }
+
+  void endBoxSelection() {
+    boxSelectionRect = null;
+    _boxSelectionStart = null;
+    notifyListeners();
+  }
+
 
   void _updateConnectedWires(Key nodeKey) {
     // When a node rotates, its ports move. Wires will naturally follow the new port positions

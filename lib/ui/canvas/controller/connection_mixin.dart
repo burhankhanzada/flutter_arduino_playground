@@ -7,7 +7,7 @@ import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/base_controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/routing_utils.dart';
-import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
+import 'package:flutter_arduino_playground/ui/widgets/wire_color_drop_down_menu.dart';
 
 mixin ConnectionMixin on BaseCanvasController {
   final List<WireModel> wires = [];
@@ -25,43 +25,16 @@ mixin ConnectionMixin on BaseCanvasController {
 
   void updateWireColor(Color? newColor) {
     currentWireColor = newColor;
-    if (newColor != null && selectedWireId != null) {
-      final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
-      if (wireIndex != -1) {
-        final wire = wires[wireIndex];
-        wires[wireIndex] = wire.copyWith(color: newColor);
-      }
-    } else if (newColor != null && selectedNodeKey != null) {
-      final node = nodes
-          .where((n) => n.key == selectedNodeKey!.key)
-          .firstOrNull;
-      if (node != null && node.componentModel.painter is LEDPainter) {
-        (node.componentModel.painter as LEDPainter).color = newColor;
-      }
+    final wireIndex = wires.indexWhere((w) => w.id == selectedWireId);
+    if (wireIndex != -1) {
+      final wire = wires[wireIndex];
+      wires[wireIndex] = wire.copyWith(color: newColor);
     }
     notifyListeners();
   }
 
   Color _getRandomColor() {
-    final availableColors = [
-      Colors.black,
-      Colors.red,
-      Colors.orange,
-      Colors.amber,
-      Colors.yellow,
-      Colors.lime,
-      Colors.green,
-      Colors.teal,
-      Colors.cyan,
-      Colors.blue,
-      Colors.indigo,
-      Colors.purple,
-      Colors.pink,
-      Colors.brown,
-      Colors.grey,
-      Colors.white,
-    ];
-    return availableColors[math.Random().nextInt(availableColors.length)];
+    return colorsLsit[math.Random().nextInt(colorsLsit.length)];
   }
 
   // State for dragging a bend point or segment

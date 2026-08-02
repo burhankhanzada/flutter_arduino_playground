@@ -13,7 +13,7 @@ import 'package:flutter_arduino_playground/ui/components/port_provider.dart';
 
 mixin SelectMixin on BaseCanvasController, ConnectionMixin {
   bool isSelected(Key key) {
-    return selectedNodeKey != null && selectedNodeKey!.key == key;
+    return selectedNodes.any((n) => n.key == key);
   }
 
   bool isHovered(Key key) {
@@ -21,8 +21,8 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
   }
 
   void clearSelection() {
-    if (selectedNodeKey != null) {
-      selectedNodeKey = null;
+    if (selectedNodes.isNotEmpty) {
+      selectedNodes.clear();
       notifyListeners();
     }
   }
@@ -41,7 +41,8 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
 
     bool changed = false;
 
-    // Clear hover status for previous node if it changed
+    // Selection logic handles selectedNodes in controller.dart checkSelection()
+    // and box selection methods, so we don't set selectedNodes here.
     if (hoveredNodeKey != found) {
       hoveredNodeKey?.hoveredLocalPosition = null;
       hoveredNodeKey?.breadboardHover = null;
@@ -165,41 +166,38 @@ mixin SelectMixin on BaseCanvasController, ConnectionMixin {
     // Calculate the offset from the node's top-left corner to the click point
     dragStartOffset = canvasPosition - found.position;
 
-    if (selectedNodeKey != found) {
-      selectedNodeKey = found;
-      // Clear wire selection when selecting a node
-      selectWire(null);
-      notifyListeners();
+    if (!selectedNodes.contains(found)) {
+      selectedNodes = [found];
     }
+
+    // Clear wire selection when selecting a node
+    selectWire(null);
+    notifyListeners();
   }
 
   void moveSelection(Offset delta) {
-    if (selectedNodeKey == null) {
-      return;
+    if (selectedNodes.isEmpty) return;
+
+    for (int i = 0; i < selectedNodes.length; i++) {
+      final oldNode = selectedNodes[i];
+      final index = nodes.indexOf(oldNode);
+      if (index == -1) continue;
+
+      // Delta is the screen delta divided by scale (already canvas coordinates basically)
+      // wait, pointer_event passes `event.delta`, which is in screen coords.
+      // Actually `base_controller.dart` or `canvas_area.dart` might be doing something.
+      // Let's just use `delta / scale` to convert screen delta to canvas delta.
+      final canvasDelta = delta / scale;
+      var newPosition = oldNode.position + canvasDelta;
+      
+      if (snapToGrid) {
+        newPosition = GridSystem.snapOffset(newPosition);
+      }
+
+      final updatedNode = oldNode.copyWith(position: newPosition);
+      nodes[index] = updatedNode;
+      selectedNodes[i] = updatedNode;
     }
-
-    final index = nodes.indexOf(selectedNodeKey!);
-    if (index == -1) return;
-
-    // Convert screen coordinates to canvas coordinates
-    final canvasPosition = screenToCanvasCoordinates(mouseLocalPosition);
-
-    // Calculate the new position considering the drag offset
-    Offset newPosition = canvasPosition;
-
-    if (dragStartOffset != null) {
-      // Subtract the drag offset to maintain the original click position relative to the node
-      newPosition = canvasPosition - dragStartOffset!;
-    }
-
-    if (snapToGrid) {
-      newPosition = GridSystem.snapOffset(newPosition);
-    }
-
-    final updatedNode = selectedNodeKey!.copyWith(position: newPosition);
-
-    selectedNodeKey = updatedNode;
-    nodes[index] = updatedNode;
 
     notifyListeners();
   }

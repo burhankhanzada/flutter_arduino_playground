@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:re_editor/re_editor.dart';
 import 'package:re_highlight/languages/cpp.dart';
-import 'package:re_highlight/styles/monokai-sublime.dart';
-import 'package:re_highlight/styles/arduino-light.dart';
+import 'package:re_highlight/styles/vs2015.dart';
+import 'package:re_highlight/styles/vs.dart';
 
 class CustomCodeEditor extends StatelessWidget {
   final CodeLineEditingController controller;
@@ -12,9 +12,9 @@ class CustomCodeEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final theme = isDark ? monokaiSublimeTheme : arduinoLightTheme;
+    final theme = isDark ? vs2015Theme : vsTheme;
     final defaultBg = isDark
-        ? const Color(0xFF23241f)
+        ? const Color(0xFF1E1E1E) // VSCode default dark background
         : const Color(0xFFFFFFFF);
 
     return Container(
