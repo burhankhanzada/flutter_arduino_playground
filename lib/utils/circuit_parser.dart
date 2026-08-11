@@ -4,7 +4,7 @@ import 'package:flutter_arduino_playground/models/circuit_model.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
-import 'package:flutter_arduino_playground/constants.dart';
+import 'package:flutter_arduino_playground/models/component_model.dart';
 import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
 
 class CircuitParser {
@@ -12,70 +12,79 @@ class CircuitParser {
     final parts = <PartData>[];
     final wires = <WireData>[];
 
-    // Simple regex parser for Part
-    final partRegex = RegExp(r"Part\(\s*type:\s*'([^']+)'\s*,\s*id:\s*'([^']+)'\s*,\s*x:\s*([-\d.]+)\s*,\s*y:\s*([-\d.]+)\s*(?:,\s*properties:\s*\{([^}]*)\})?\s*\)");
-    for (final match in partRegex.allMatches(code)) {
-      final propsStr = match.group(5);
-      Map<String, dynamic>? properties;
-      if (propsStr != null && propsStr.trim().isNotEmpty) {
-        properties = {};
-        final pairs = propsStr.split(',');
-        for (final pair in pairs) {
-          final kv = pair.split(':');
-          if (kv.length == 2) {
-            final key = kv[0].replaceAll("'", "").trim();
-            final value = kv[1].replaceAll("'", "").trim();
-            properties[key] = value;
+    String currentSection = '';
+    final lines = code.split('\n');
+    
+    for (var line in lines) {
+      line = line.trim();
+      if (line.isEmpty || line.startsWith('//')) continue;
+
+      if (line.startsWith('CIRCUIT ')) {
+        continue;
+      } else if (line == 'PARTS' || line == 'WIRES') {
+        currentSection = line;
+      } else {
+        if (currentSection == 'PARTS') {
+          final partRegex = RegExp(r'^(\w+)\s+"([^"]+)"\s+AT\s+([-\d.]+)\s+([-\d.]+)(?:\s+PROPERTIES\s+\{(.+)\})?');
+          final match = partRegex.firstMatch(line);
+          if (match != null) {
+            final id = match.group(1)!;
+            final type = match.group(2)!;
+            final x = double.tryParse(match.group(3)!) ?? 0;
+            final y = double.tryParse(match.group(4)!) ?? 0;
+            
+            Map<String, dynamic>? properties;
+            final propsStr = match.group(5);
+            if (propsStr != null && propsStr.trim().isNotEmpty) {
+              properties = {};
+              final pairs = propsStr.split(',');
+              for (final pair in pairs) {
+                final kv = pair.split(':');
+                if (kv.length == 2) {
+                  final key = kv[0].trim();
+                  final value = kv[1].replaceAll('"', '').trim();
+                  properties[key] = value;
+                }
+              }
+            }
+            parts.add(PartData(id: id, type: type, x: x, y: y, properties: properties));
+          }
+        } else if (currentSection == 'WIRES') {
+          final wireRegex = RegExp(r'^(\w+):([^\s]+)\s+TO\s+(\w+):([^\s]+)(?:\s+COLOR\s+(\w+))?(?:\s+BEND\s+\[(.*?)\])?');
+          final match = wireRegex.firstMatch(line);
+          if (match != null) {
+            final fromId = match.group(1)!;
+            final fromPort = match.group(2)!;
+            final toId = match.group(3)!;
+            final toPort = match.group(4)!;
+            final color = match.group(5) ?? 'green';
+            
+            final bendPoints = <Offset>[];
+            final bendStr = match.group(6);
+            if (bendStr != null && bendStr.isNotEmpty) {
+              final points = bendStr.split(' ');
+              for (final p in points) {
+                if (p.trim().isEmpty) continue;
+                final xy = p.split(',');
+                if (xy.length == 2) {
+                  bendPoints.add(Offset(
+                    double.tryParse(xy[0]) ?? 0,
+                    double.tryParse(xy[1]) ?? 0,
+                  ));
+                }
+              }
+            }
+            
+            wires.add(WireData(
+              fromId: fromId,
+              fromPort: fromPort,
+              toId: toId,
+              toPort: toPort,
+              color: color,
+              bendPoints: bendPoints,
+            ));
           }
         }
-      }
-
-      parts.add(PartData(
-        type: match.group(1)!,
-        id: match.group(2)!,
-        x: double.tryParse(match.group(3)!) ?? 0,
-        y: double.tryParse(match.group(4)!) ?? 0,
-        properties: properties,
-      ));
-    }
-
-    // Regex for Wire
-    final wireRegex = RegExp(
-      r"Wire\(\s*from:\s*'([^']+)'\s*,\s*to:\s*'([^']+)'\s*(?:,\s*color:\s*'([^']+)'\s*)?(?:,\s*bendPoints:\s*\[([^\]]*)\])?\s*\)",
-    );
-    for (final match in wireRegex.allMatches(code)) {
-      final fromFull = match.group(1)!;
-      final toFull = match.group(2)!;
-      final colorStr = match.group(3) ?? 'green';
-      final bendPointsStr = match.group(4) ?? '';
-
-      final fromParts = fromFull.split(':');
-      final toParts = toFull.split(':');
-
-      if (fromParts.length == 2 && toParts.length == 2) {
-        final bendPoints = <Offset>[];
-        final offsetRegex = RegExp(
-          r"Offset\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)",
-        );
-        for (final offsetMatch in offsetRegex.allMatches(bendPointsStr)) {
-          bendPoints.add(
-            Offset(
-              double.tryParse(offsetMatch.group(1)!) ?? 0,
-              double.tryParse(offsetMatch.group(2)!) ?? 0,
-            ),
-          );
-        }
-
-        wires.add(
-          WireData(
-            fromId: fromParts[0],
-            fromPort: fromParts[1],
-            toId: toParts[0],
-            toPort: toParts[1],
-            color: colorStr,
-            bendPoints: bendPoints,
-          ),
-        );
       }
     }
 
@@ -88,10 +97,10 @@ class CircuitParser {
     Map<Key, String>? outNodeIdMap,
   }) {
     final buffer = StringBuffer();
-    buffer.writeln('Circuit(');
-    buffer.writeln('  parts: [');
-
-    // Map LocalKey to a readable ID
+    buffer.writeln('CIRCUIT "My Circuit"');
+    buffer.writeln('');
+    buffer.writeln('PARTS');
+    
     final idMap = <Key, String>{};
 
     int unoCount = 1;
@@ -119,14 +128,14 @@ class CircuitParser {
 
       String propsStr = '';
       if (node.properties.isNotEmpty) {
-        final propsList = node.properties.entries.map((e) => "'${e.key}': '${e.value}'").join(', ');
-        propsStr = ', properties: {$propsList}';
+        final propsList = node.properties.entries.map((e) => "${e.key}: \"${e.value}\"").join(', ');
+        propsStr = ' PROPERTIES {$propsList}';
       }
 
-      buffer.writeln('    Part(type: \'${node.componentModel.name}\', id: \'$id\', x: ${node.position.dx}, y: ${node.position.dy}$propsStr),');
+      buffer.writeln('  $id "${node.componentModel.name}" AT ${node.position.dx.toStringAsFixed(1)} ${node.position.dy.toStringAsFixed(1)}$propsStr');
     }
-    buffer.writeln('  ],');
-    buffer.writeln('  wires: [');
+    buffer.writeln('');
+    buffer.writeln('WIRES');
 
     for (final wire in wires) {
       final fromId = idMap[wire.start.nodeKey];
@@ -137,16 +146,11 @@ class CircuitParser {
 
       String bendPointsStr = '';
       if (wire.bendPoints.isNotEmpty) {
-        bendPointsStr =
-            ', bendPoints: [${wire.bendPoints.map((p) => 'Offset(${p.dx}, ${p.dy})').join(', ')}]';
+        bendPointsStr = ' BEND [${wire.bendPoints.map((p) => '${p.dx.toStringAsFixed(1)},${p.dy.toStringAsFixed(1)}').join(' ')}]';
       }
 
-      buffer.writeln(
-        '    Wire(from: \'$fromId:${wire.start.portId}\', to: \'$toId:${wire.end.portId}\', color: \'$colorName\'$bendPointsStr),',
-      );
+      buffer.writeln('  $fromId:${wire.start.portId} TO $toId:${wire.end.portId} COLOR $colorName$bendPointsStr');
     }
-    buffer.writeln('  ]');
-    buffer.writeln(')');
     return buffer.toString();
   }
 
@@ -194,6 +198,7 @@ class CircuitParser {
     CircuitData data,
     List<CanvasNodeModel> outNodes,
     List<WireModel> outWires,
+    List<ComponentModel> components,
   ) {
     outNodes.clear();
     outWires.clear();
@@ -205,21 +210,25 @@ class CircuitParser {
         final componentModel = components
             .firstWhere((c) => c.name == part.type)
             .clone();
-        if (componentModel.painter is LEDPainter && part.properties?['color'] != null) {
+        final ledColor = part.properties?['color'] ?? part.properties?['Color'];
+        if (componentModel.painter is LEDPainter && ledColor != null) {
           (componentModel.painter as LEDPainter).color = _nameToColor(
-            part.properties!['color']!,
+            ledColor.toString(),
           );
         }
 
         final key = UniqueKey();
         idToKey[part.id] = key;
-        
-        outNodes.add(CanvasNodeModel(
-          key: key,
-          position: Offset(part.x, part.y),
-          componentModel: componentModel,
-          properties: part.properties,
-        ));
+
+        outNodes.add(
+          CanvasNodeModel(
+            key: key,
+            position: Offset(part.x, part.y),
+            componentModel: componentModel,
+            rotationAngle: part.rotation,
+            properties: part.properties,
+          ),
+        );
       } catch (_) {
         // Component type not found
       }

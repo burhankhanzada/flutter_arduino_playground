@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_arduino_playground/providers/workspace_provider.dart';
 
 class ZoomControls extends ConsumerWidget {
@@ -12,7 +13,21 @@ class ZoomControls extends ConsumerWidget {
     return Positioned(
       top: 16,
       right: 16,
-      child: Card(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary,
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary,
+              blurRadius: 8,
+            ),
+          ],
+        ),
         child: IntrinsicHeight(
           child: Row(
             mainAxisSize: MainAxisSize.min,

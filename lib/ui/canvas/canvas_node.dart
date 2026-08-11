@@ -49,6 +49,7 @@ class CanvasNode extends StatelessWidget {
       hoveredLocalPosition: node.hoveredLocalPosition,
       breadboardHover: node.breadboardHover,
       properties: node.properties,
+      customSize: node.baseSize,
     );
 
     final outlineComponent = ComponentWidget(
@@ -57,6 +58,7 @@ class CanvasNode extends StatelessWidget {
       breadboardHover: node.breadboardHover,
       properties: node.properties,
       isOutline: true,
+      customSize: node.baseSize,
     );
 
     return RepaintBoundary(
@@ -67,7 +69,7 @@ class CanvasNode extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Positioned(
-              left: node.pivotOffset.dx - node.componentModel.size.width / 2,
+              left: node.pivotOffset.dx - node.baseSize.width / 2,
               top: node.pivotOffset.dy,
               child: Transform.rotate(
                 angle: node.rotationAngle,

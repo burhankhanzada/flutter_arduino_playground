@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,96 +18,114 @@ class Toolbar extends ConsumerWidget {
       alignment: AlignmentGeometry.bottomCenter,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 16),
-        child: Card(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            border: Border.all(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary,
+                blurRadius: 8,
+              ),
+            ],
+          ),
           child: ListenableBuilder(
             listenable: controller,
             builder: (context, _) {
               final hasNodeSelection = controller.selectedNodes.isNotEmpty;
-              final hasSelection = hasNodeSelection || controller.selectedWireIds.isNotEmpty;
+              final hasSelection =
+                  hasNodeSelection || controller.selectedWireIds.isNotEmpty;
               return IntrinsicHeight(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.copy()
-                        : null,
-                    icon: const Icon(Icons.copy),
-                    tooltip: 'Copy',
-                  ),
-                  IconButton(
-                    onPressed: () => controller.paste(),
-                    icon: const Icon(Icons.paste),
-                    tooltip: 'Paste',
-                  ),
-                  IconButton(
-                    onPressed: hasSelection ? () => controller.remove() : null,
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete',
-                  ),
-                  const VerticalDivider(),
-                  IconButton(
-                    onPressed: () => controller.undo(),
-                    icon: const Icon(Icons.undo),
-                    tooltip: 'Undo',
-                  ),
-                  IconButton(
-                    onPressed: () => controller.redo(),
-                    icon: const Icon(Icons.redo),
-                    tooltip: 'Redo',
-                  ),
-                  const VerticalDivider(),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.rotateLeft()
-                        : null,
-                    icon: const Icon(Icons.rotate_left),
-                    tooltip: 'Rotate Left',
-                  ),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.rotateRight()
-                        : null,
-                    icon: const Icon(Icons.rotate_right),
-                    tooltip: 'Rotate Right',
-                  ),
-                  const VerticalDivider(),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.flipHorizontal()
-                        : null,
-                    icon: const Icon(Icons.flip),
-                    tooltip: 'Flip Horizontal',
-                  ),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.flipVertical()
-                        : null,
-                    icon: Transform.rotate(
-                      angle: math.pi * 1 / 2,
-                      child: const Icon(Icons.flip),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.copy()
+                          : null,
+                      icon: const Icon(Icons.copy),
+                      tooltip: 'Copy',
                     ),
-                    tooltip: 'Flip Vertical',
-                  ),
-                  const VerticalDivider(),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.layerUp()
-                        : null,
-                    icon: const Icon(Icons.arrow_upward),
-                    tooltip: 'Layer Up',
-                  ),
-                  IconButton(
-                    onPressed: hasNodeSelection
-                        ? () => controller.layerDown()
-                        : null,
-                    icon: const Icon(Icons.arrow_downward),
-                    tooltip: 'Layer Down',
-                  ),
-                  const VerticalDivider(),
-                  WireColorDropDownMenu(controller: controller),
-                ],
-              ));
+                    IconButton(
+                      onPressed: () => controller.paste(),
+                      icon: const Icon(Icons.paste),
+                      tooltip: 'Paste',
+                    ),
+                    IconButton(
+                      onPressed: hasSelection
+                          ? () => controller.remove()
+                          : null,
+                      icon: const Icon(Icons.delete_outline),
+                      tooltip: 'Delete',
+                    ),
+                    const VerticalDivider(),
+                    IconButton(
+                      onPressed: () => controller.undo(),
+                      icon: const Icon(Icons.undo),
+                      tooltip: 'Undo',
+                    ),
+                    IconButton(
+                      onPressed: () => controller.redo(),
+                      icon: const Icon(Icons.redo),
+                      tooltip: 'Redo',
+                    ),
+                    const VerticalDivider(),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.rotateLeft()
+                          : null,
+                      icon: const Icon(Icons.rotate_left),
+                      tooltip: 'Rotate Left',
+                    ),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.rotateRight()
+                          : null,
+                      icon: const Icon(Icons.rotate_right),
+                      tooltip: 'Rotate Right',
+                    ),
+                    const VerticalDivider(),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.flipHorizontal()
+                          : null,
+                      icon: const Icon(Icons.flip),
+                      tooltip: 'Flip Horizontal',
+                    ),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.flipVertical()
+                          : null,
+                      icon: Transform.rotate(
+                        angle: pi * 1 / 2,
+                        child: const Icon(Icons.flip),
+                      ),
+                      tooltip: 'Flip Vertical',
+                    ),
+                    const VerticalDivider(),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.layerUp()
+                          : null,
+                      icon: const Icon(Icons.arrow_upward),
+                      tooltip: 'Layer Up',
+                    ),
+                    IconButton(
+                      onPressed: hasNodeSelection
+                          ? () => controller.layerDown()
+                          : null,
+                      icon: const Icon(Icons.arrow_downward),
+                      tooltip: 'Layer Down',
+                    ),
+                    const VerticalDivider(),
+                    WireColorDropDownMenu(controller: controller),
+                  ],
+                ),
+              );
             },
           ),
         ),

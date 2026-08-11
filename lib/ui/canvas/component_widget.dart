@@ -11,6 +11,7 @@ class ComponentWidget extends StatelessWidget {
   final BreadboardHoverState? breadboardHover;
   final Map<String, dynamic>? properties;
   final bool isOutline;
+  final Size? customSize;
 
   const ComponentWidget({
     super.key,
@@ -19,14 +20,34 @@ class ComponentWidget extends StatelessWidget {
     this.breadboardHover,
     this.properties,
     this.isOutline = false,
+    this.customSize,
   });
 
   @override
   Widget build(BuildContext context) {
+    final actualSize = customSize ?? componentModel.size;
+
     var painter = componentModel.painter;
+
+    if (painter is LEDPainter) {
+      final isOn = properties?['isOn'] == true;
+      final hasError = properties?['hasError'] == true;
+      final colorProp = properties?['color'] ?? properties?['Color'];
+      final color = colorProp != null ? _parseColor(colorProp) : Colors.redAccent;
+
+      return CustomPaint(
+        size: actualSize,
+        painter: LEDPainter.withState(
+          isOn: isOn,
+          color: color,
+          hasError: hasError,
+        ),
+      );
+    }
+
     if (painter is BreadboardPainter) {
       return CustomPaint(
-        size: componentModel.size,
+        size: actualSize,
         painter: BreadboardPainter(
           config: painter.config,
           hoverState: breadboardHover,
@@ -34,36 +55,44 @@ class ComponentWidget extends StatelessWidget {
       );
     }
 
-    if (painter is LEDPainter && properties != null) {
-      if (properties!.containsKey('Color')) {
-        painter.color = _getColorFromString(properties!['Color']);
-      }
-    }
-
-    if (painter is LEDPainter && isOutline) {
-      return CustomPaint(size: componentModel.size, painter: LEDOutlinePainter(painter));
-    }
-
-    return CustomPaint(size: componentModel.size, painter: painter);
+    return CustomPaint(size: actualSize, painter: painter);
   }
 
-  Color _getColorFromString(String colorString) {
-    switch (colorString.toLowerCase()) {
-      case 'green':
-        return Colors.green;
-      case 'blue':
-        return Colors.blue;
-      case 'yellow':
-        return Colors.yellow;
-      case 'cyan':
-        return Colors.cyan;
-      case 'pink':
-        return Colors.pink;
-      case 'orange':
-        return Colors.orange;
-      case 'red':
-      default:
-        return Colors.red;
+  Color _parseColor(dynamic val) {
+    if (val is Color) return val;
+    if (val is String) {
+      var str = val.trim();
+      if (str.startsWith('#')) {
+        var hex = str.substring(1);
+        if (hex.length == 6) {
+          hex = 'FF$hex';
+        }
+        final intVal = int.tryParse(hex, radix: 16);
+        if (intVal != null) {
+          return Color(intVal);
+        }
+      }
+      switch (str.toLowerCase()) {
+        case 'green':
+          return Colors.green;
+        case 'blue':
+          return Colors.blue;
+        case 'yellow':
+          return Colors.yellow;
+        case 'orange':
+          return Colors.orange;
+        case 'purple':
+          return Colors.purple;
+        case 'white':
+          return Colors.white;
+        case 'grey':
+        case 'gray':
+          return Colors.grey;
+        case 'red':
+        default:
+          return Colors.redAccent;
+      }
     }
+    return Colors.redAccent;
   }
 }

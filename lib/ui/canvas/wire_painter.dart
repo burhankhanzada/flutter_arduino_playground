@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/models/port_model.dart';
 import 'package:flutter_arduino_playground/models/wire_model.dart';
@@ -13,6 +14,7 @@ class WirePainter extends CustomPainter {
   final List<String> selectedWireIds;
   final Color pendingColor;
   final Color selectionColor;
+  final List<Offset> pendingBendPoints;
 
   WirePainter({
     required this.wires,
@@ -24,6 +26,7 @@ class WirePainter extends CustomPainter {
     this.selectedWireIds = const [],
     this.selectionColor = Colors.blue,
     this.pendingColor = Colors.yellow,
+    this.pendingBendPoints = const [],
   });
 
   @override
@@ -70,7 +73,7 @@ class WirePainter extends CustomPainter {
       if (startPos != null) {
         paint.color = pendingColor.withValues(alpha: 0.7);
         paint.strokeWidth = 3.0;
-        _drawPolyline(canvas, startPos, pendingEndMouse!, [], paint, false);
+        _drawPolyline(canvas, startPos, pendingEndMouse!, pendingBendPoints, paint, false);
       }
     }
 

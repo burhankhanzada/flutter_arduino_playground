@@ -44,5 +44,14 @@ post_install do |installer|
       end
     end
   end
+
+  frameworks_script = File.join(__dir__, 'Pods', 'Target Support Files', 'Pods-Runner', 'Pods-Runner-frameworks.sh')
+  if File.exist?(frameworks_script)
+    content = File.read(frameworks_script)
+    unless content.include?('libngspice.dylib')
+      injection = "\nif [ -f \"/opt/homebrew/lib/libngspice.dylib\" ]; then\n  cp \"/opt/homebrew/lib/libngspice.dylib\" \"${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libngspice.dylib\"\nelif [ -f \"${PODS_ROOT}/../libngspice.dylib\" ]; then\n  cp \"${PODS_ROOT}/../libngspice.dylib\" \"${CONFIGURATION_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/libngspice.dylib\"\nfi\n"
+      File.write(frameworks_script, injection + content)
+    end
+  end
 end
 

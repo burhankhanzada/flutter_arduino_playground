@@ -13,7 +13,7 @@ final breadboardPainterFull = BreadboardPainter(
   config: BreadboardConfig.full(),
 );
 
-final List<ComponentModel> components = [
+final List<ComponentModel> standardComponents = [
   ComponentModel(
     name: 'LED',
     size: LEDPainter.componentSize,

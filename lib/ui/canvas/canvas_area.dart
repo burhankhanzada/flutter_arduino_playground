@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
-import 'package:flutter_arduino_playground/constants.dart';
+import 'package:flutter_arduino_playground/providers/component_provider.dart';
 import 'package:flutter_arduino_playground/models/canvas_node_model.dart';
 import 'package:flutter_arduino_playground/ui/canvas/canvas.dart';
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
 import 'package:flutter_arduino_playground/ui/canvas/grid_system.dart';
 
-class CanvasArea extends StatefulWidget {
+class CanvasArea extends ConsumerStatefulWidget {
   final CanvasController controller;
   const CanvasArea({super.key, required this.controller});
 
   @override
-  State<CanvasArea> createState() => _CanvasAreaState();
+  ConsumerState<CanvasArea> createState() => _CanvasAreaState();
 }
 
-class _CanvasAreaState extends State<CanvasArea> {
+class _CanvasAreaState extends ConsumerState<CanvasArea> {
   CanvasController get controller => widget.controller;
 
   @override
@@ -41,10 +42,24 @@ class _CanvasAreaState extends State<CanvasArea> {
     }
 
     if (componentName != null) {
-      final canvasPosition = controller.screenToCanvasCoordinates(
-        event.position.local,
-      );
+      final renderBox = context.findRenderObject() as RenderBox;
+      final localPosition = renderBox.globalToLocal(event.position.global);
 
+      // Transform local position to canvas coordinates
+      final canvasPositionRaw =
+          (localPosition - controller.offset) / controller.scale;
+      Offset canvasPosition = canvasPositionRaw;
+
+      if (controller.snapToGrid) {
+        canvasPosition = Offset(
+          (canvasPosition.dx / controller.gridCellSize).round() *
+              controller.gridCellSize,
+          (canvasPosition.dy / controller.gridCellSize).round() *
+              controller.gridCellSize,
+        );
+      }
+
+      final components = ref.read(componentRegistryProvider).value ?? [];
       final componentModel = components
           .firstWhere((type) => type.name == componentName)
           .clone();

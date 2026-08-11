@@ -34,10 +34,26 @@ class SerialLogsNotifier extends Notifier<List<String>> {
   }
 }
 
-final verticalPanelRatioProvider =
-    NotifierProvider<VerticalPanelRatioNotifier, double>(
-      VerticalPanelRatioNotifier.new,
-    );
+final spiceLogsProvider = NotifierProvider<SpiceLogsNotifier, List<String>>(
+  SpiceLogsNotifier.new,
+);
+
+class SpiceLogsNotifier extends Notifier<List<String>> {
+  @override
+  List<String> build() => [];
+
+  void addLog(String log) {
+    state = [...state, log];
+  }
+
+  void clear() {
+    state = [];
+  }
+}
+
+final verticalPanelRatioProvider = NotifierProvider<VerticalPanelRatioNotifier, double>(
+  VerticalPanelRatioNotifier.new,
+);
 
 class VerticalPanelRatioNotifier extends Notifier<double> {
   double _savedRatio = 0.6;

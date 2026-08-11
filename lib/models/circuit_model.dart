@@ -5,6 +5,7 @@ class PartData {
   final String id;
   final double x;
   final double y;
+  final double rotation;
   final Map<String, dynamic>? properties;
 
   PartData({
@@ -12,6 +13,7 @@ class PartData {
     required this.id,
     required this.x,
     required this.y,
+    this.rotation = 0.0,
     this.properties,
   });
 }

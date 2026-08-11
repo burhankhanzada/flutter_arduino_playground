@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum SidebarTab { editor, palette, properties, debugConsole, serialOutput }
+enum SidebarTab { editor, palette, properties, debugConsole, serialOutput, spiceLogs }
 
 class SidebarTabNotifier extends Notifier<SidebarTab> {
   @override

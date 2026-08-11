@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_arduino_playground/ui/widgets/editor_tab_view.dart';
 import 'package:flutter_arduino_playground/ui/widgets/editor_tab_bar.dart';
 import 'package:flutter_arduino_playground/providers/sidebar_provider.dart';
@@ -62,9 +63,23 @@ class LeftPanel extends ConsumerWidget {
           ],
         );
       case SidebarTab.debugConsole:
-        return LogViewer(logs: ref.watch(debugLogsProvider));
+        return LogViewer(
+          title: 'Debug Console',
+          logs: ref.watch(debugLogsProvider),
+          onClear: () => ref.read(debugLogsProvider.notifier).clear(),
+        );
       case SidebarTab.serialOutput:
-        return LogViewer(logs: ref.watch(serialLogsProvider));
+        return LogViewer(
+          title: 'Serial Monitor',
+          logs: ref.watch(serialLogsProvider),
+          onClear: () => ref.read(serialLogsProvider.notifier).clear(),
+        );
+      case SidebarTab.spiceLogs:
+        return LogViewer(
+          title: 'SPICE Logs',
+          logs: ref.watch(spiceLogsProvider),
+          onClear: () => ref.read(spiceLogsProvider.notifier).clear(),
+        );
       case SidebarTab.palette:
         return const PalettePanel();
       case SidebarTab.properties:

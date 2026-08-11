@@ -1,32 +1,71 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter_arduino_playground/ui/canvas/controller/controller.dart';
-import 'package:flutter_arduino_playground/models/wire_model.dart';
-import 'package:flutter_arduino_playground/ui/components/led_painter.dart';
+import 'package:flutter_arduino_playground/simulation/circuit_netlist.dart';
+import 'package:flutter_arduino_playground/simulation/avr_interop.dart';
+import 'package:flutter_arduino_playground/simulation/spice/spice_engine.dart';
+import 'package:flutter_arduino_playground/services/compiler_service.dart';
 
 class SimulationRunner {
   final CanvasController canvasController;
   final void Function(String)? onSerialPrint;
+  final void Function(String)? onSpiceLog;
   bool isSimulating = false;
   bool isPaused = false;
+  late CircuitNetlist _netlist;
+  late SpiceEngine _spiceEngine;
+  final Map<Key, double> _lastLoggedCurrent = {};
 
-  SimulationRunner({required this.canvasController, this.onSerialPrint});
+  SimulationRunner({
+    required this.canvasController,
+    this.onSerialPrint,
+    this.onSpiceLog,
+  });
 
   void stop() {
     isSimulating = false;
     isPaused = false;
-    // Turn off all LEDs when stopping
+    AVRBridge.onSerialByte = null;
     for (final node in canvasController.nodes) {
       if (node.componentModel.name == 'LED') {
-        (node.componentModel.painter as LEDPainter).isOn = false;
+        node.properties['isOn'] = false;
+        node.properties['hasError'] = false;
       }
     }
     canvasController.forceUpdate();
   }
 
-  void start(String code, void Function() onStop) {
-    if (isSimulating) return;
-    isSimulating = true;
-    isPaused = false;
-    _runLoop(code, onStop);
+  Future<bool> start(String code, void Function() onStop) async {
+    if (isSimulating) return false;
+
+    onSerialPrint?.call("Compiling sketch with arduino-cli...\n");
+    String compiledHex;
+    try {
+      compiledHex = await CompilerService.compile(code);
+    } catch (e) {
+      onSerialPrint?.call("Compilation Failed:\n${e.toString()}\n");
+      return false;
+    }
+
+    try {
+      isSimulating = true;
+      isPaused = false;
+
+      _netlist = CircuitNetlist();
+      _netlist.build(canvasController.nodes, canvasController.wires);
+
+      _lastLoggedCurrent.clear();
+      _spiceEngine = SpiceEngine(onLog: onSpiceLog);
+      _spiceEngine.build(_netlist, canvasController.nodes);
+
+      // Launch run loop asynchronously
+      _runLoop(compiledHex, onStop);
+      return true;
+    } catch (e) {
+      onSerialPrint?.call("Simulation Initialization Failed:\n${e.toString()}\n");
+      isSimulating = false;
+      return false;
+    }
   }
 
   void pause() {
@@ -41,144 +80,116 @@ class SimulationRunner {
     }
   }
 
-  LEDPainter? _getLedPainterForPin(String pin) {
-    final arduinoNode = canvasController.nodes.firstWhere(
-      (n) => n.componentModel.name == 'Arduino Uno',
-    );
+  void _updateAnalogLeds() {
+    var changed = false;
 
-    // Find wire connected to arduino pin
-    WireModel? wire1;
-    bool isStartAtArduino = true;
-    for (var w in canvasController.wires) {
-      if (w.start.nodeKey == arduinoNode.key && w.start.portId == pin) {
-        wire1 = w;
-        break;
+    for (final node in canvasController.nodes) {
+      if (node.componentModel.name != 'LED') continue;
+
+      final props = node.properties;
+      final current = _spiceEngine.getLedCurrent(node.key.toString());
+
+      // The sense source is oriented anode-side (+) to cathode-side (-), so
+      // its branch current is already positive for forward LED current.
+      final forwardCurrent = current;
+
+      if (forwardCurrent != _lastLoggedCurrent[node.key]) {
+        _lastLoggedCurrent[node.key] = forwardCurrent;
+        onSpiceLog?.call("LED ${node.key} current: $forwardCurrent A\n");
       }
-      if (w.end.nodeKey == arduinoNode.key && w.end.portId == pin) {
-        wire1 = w;
-        isStartAtArduino = false;
-        break;
+
+      final bool isOn;
+      final bool hasError;
+      if (forwardCurrent > 0.001) {
+        isOn = true;
+        hasError = false;
+      } else if (forwardCurrent < -0.005) {
+        isOn = false;
+        hasError = true;
+        onSpiceLog?.call("ERROR: LED reverse breakdown current detected.\n");
+      } else {
+        isOn = false;
+        hasError = false;
+      }
+
+      if (props['isOn'] != isOn || props['hasError'] != hasError) {
+        props['isOn'] = isOn;
+        props['hasError'] = hasError;
+        changed = true;
       }
     }
-    if (wire1 == null) return null;
 
-    final nextNodeKey = isStartAtArduino
-        ? wire1.end.nodeKey
-        : wire1.start.nodeKey;
-    final nextNode = canvasController.nodes.firstWhere(
-      (n) => n.key == nextNodeKey,
-    );
-
-    if (nextNode.componentModel.name == 'LED') {
-      return nextNode.componentModel.painter as LEDPainter;
-    }
-
-    if (nextNode.componentModel.name == 'Resistor') {
-      final resistorPortConnected = isStartAtArduino
-          ? wire1.end.portId
-          : wire1.start.portId;
-      final otherPortId = resistorPortConnected == 'left' ? 'right' : 'left';
-
-      WireModel? wire2;
-      bool isStartAtResistor = true;
-      for (var w in canvasController.wires) {
-        if (w.start.nodeKey == nextNode.key && w.start.portId == otherPortId) {
-          wire2 = w;
-          break;
-        }
-        if (w.end.nodeKey == nextNode.key && w.end.portId == otherPortId) {
-          wire2 = w;
-          isStartAtResistor = false;
-          break;
-        }
-      }
-      if (wire2 == null) return null;
-
-      final ledNodeKey = isStartAtResistor
-          ? wire2.end.nodeKey
-          : wire2.start.nodeKey;
-      final ledNode = canvasController.nodes.firstWhere(
-        (n) => n.key == ledNodeKey,
-      );
-
-      if (ledNode.componentModel.name == 'LED')
-        return ledNode.componentModel.painter as LEDPainter;
-    }
-    return null;
+    // Repainting the whole canvas 60x a second when nothing changed starves
+    // the run loop of the very frames it needs to advance the emulator.
+    if (changed) canvasController.forceUpdate();
   }
 
-  Future<void> _runLoop(String code, void Function() onStop) async {
-    final loopRegex = RegExp(r'void\s+loop\(\)\s*\{([^}]*)\}');
-    final match = loopRegex.firstMatch(code);
-    if (match == null) {
+  Future<void> _runLoop(String compiledHex, void Function() onStop) async {
+    try {
+      // 1. Load the freshly compiled HEX file into the JS AVR Bridge
+      AVRBridge.onSerialByte = (text) => onSerialPrint?.call(text);
+      AVRBridge.loadHex(compiledHex);
+    } catch (e) {
+      onSerialPrint?.call("Error loading HEX: ${e.toString()}\n");
       isSimulating = false;
       onStop();
       return;
     }
 
-    // Strip comments
-    final cleanBody = match.group(1)!.replaceAll(RegExp(r'//.*'), '');
-    final statements = cleanBody
-        .split(';')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    onSerialPrint?.call("Running real AVR execution of sketch...\n");
+
+    // The ATmega328p on an Uno runs at 16 MHz. Rather than assuming a fixed
+    // budget per frame, pace the emulator off the wall clock so a delay(1000)
+    // takes about a second no matter how fast the host executes instructions.
+    const int cyclesPerMicrosecond = 16;
+    const int maxCatchUpUs = 50000; // never try to make up more than 50 ms
+    bool lastState = false;
+
+    final clock = Stopwatch()..start();
+    int lastElapsedUs = clock.elapsedMicroseconds;
 
     while (isSimulating) {
-      if (statements.isEmpty) {
+      while (isSimulating && isPaused) {
         await Future.delayed(const Duration(milliseconds: 100));
-        continue;
+        // Time spent paused is not simulated time.
+        lastElapsedUs = clock.elapsedMicroseconds;
       }
+      if (!isSimulating) break;
 
-      bool didAwait = false;
-      for (final statement in statements) {
-        while (isSimulating && isPaused) {
-          await Future.delayed(const Duration(milliseconds: 100));
+      try {
+        // 2. Advance the emulator by however much real time has passed,
+        //    clamped so a slow frame cannot spiral into an ever-growing debt.
+        final nowUs = clock.elapsedMicroseconds;
+        var deltaUs = nowUs - lastElapsedUs;
+        lastElapsedUs = nowUs;
+        if (deltaUs > maxCatchUpUs) deltaUs = maxCatchUpUs;
+        if (deltaUs > 0) {
+          AVRBridge.runCycles(deltaUs * cyclesPerMicrosecond);
         }
-        if (!isSimulating) break;
 
-        if (statement.startsWith('digitalWrite')) {
-          final pinMatch = RegExp(
-            r'digitalWrite\(\s*(\w+)\s*,\s*(HIGH|LOW)\s*\)',
-          ).firstMatch(statement);
-          if (pinMatch != null) {
-            final pin = pinMatch.group(1)!;
-            final isHigh = pinMatch.group(2) == 'HIGH';
-
-            final ledPainter = _getLedPainterForPin(pin);
-            if (ledPainter != null) {
-              ledPainter.isOn = isHigh;
-              canvasController.forceUpdate();
-            }
-          }
-        } else if (statement.startsWith('Serial.print')) {
-          final printMatch = RegExp(
-            r'Serial\.print(?:ln)?\(\s*"(.*?)"\s*\)',
-          ).firstMatch(statement);
-          if (printMatch != null) {
-            final text = printMatch.group(1)!;
-            onSerialPrint?.call(text);
-          }
-        } else if (statement.startsWith('delay')) {
-          final delayMatch = RegExp(
-            r'delay\(\s*(\d+)\s*\)',
-          ).firstMatch(statement);
-          if (delayMatch != null) {
-            final ms = int.tryParse(delayMatch.group(1)!) ?? 1000;
-            await Future.delayed(Duration(milliseconds: ms));
-            didAwait = true;
-          }
+        // 3. Read Pin 13 state and update SPICE voltage source
+        final isHigh = AVRBridge.getPin13State();
+        if (isHigh != lastState) {
+          onSerialPrint?.call("Pin 13 hardware state changed to: $isHigh\n");
+          lastState = isHigh;
         }
-      }
 
-      // Safety yield: if the user's code had no delay() statements,
-      // we MUST sleep to prevent locking the main thread!
-      if (!didAwait) {
-        await Future.delayed(const Duration(milliseconds: 50));
-      } else {
-        await Future.delayed(Duration.zero);
+        _spiceEngine.setPinVoltage('13', isHigh ? 5.0 : 0.0);
+
+        // 4. Solve the analog circuit
+        _spiceEngine.solve();
+
+        // 5. Update LEDs based on analog currents
+        _updateAnalogLeds();
+
+        // Yield to Flutter to render the frame
+        await Future.delayed(const Duration(milliseconds: 16));
+      } catch (e) {
+        onSpiceLog?.call("Emulator/SPICE crashed: ${e.toString()}\n");
+        break;
       }
     }
+
     onStop();
   }
 }

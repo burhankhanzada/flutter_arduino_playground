@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -16,8 +16,10 @@ mixin ConnectionMixin on BaseCanvasController {
   PortLocation? startPort;
   Offset? currentDragPosition;
   Color? currentWireColor; // null means Auto
-  Color?
-  activeDragColor; // Holds the assigned random or current color during dragging
+  Color? activeDragColor; // Holds the assigned random or current color during dragging
+  List<Offset> pendingBendPoints = [];
+  bool isMovingWireEndpoint = false;
+  PortLocation? originalDetachedPort;
 
   // Interaction state
   String? hoveredWireId;
@@ -38,7 +40,7 @@ mixin ConnectionMixin on BaseCanvasController {
   }
 
   Color _getRandomColor() {
-    return colorsLsit[math.Random().nextInt(colorsLsit.length)];
+    return colorsLsit[Random().nextInt(colorsLsit.length)];
   }
 
   // State for dragging a bend point or segment
@@ -52,11 +54,14 @@ mixin ConnectionMixin on BaseCanvasController {
       draggingWireId != null &&
       (draggingBendPointIndex != null || isDraggingSegment);
 
-  void startWiring(PortLocation port, Offset initialPosition) {
+  void startWiring(PortLocation port, Offset initialPosition, {List<Offset>? bendPoints, bool isMovingExisting = false, PortLocation? originalDetachedPort}) {
     selectedWireIds.clear();
     startPort = port;
     currentDragPosition = initialPosition;
     activeDragColor = currentWireColor ?? _getRandomColor();
+    pendingBendPoints = bendPoints ?? [];
+    isMovingWireEndpoint = isMovingExisting;
+    this.originalDetachedPort = originalDetachedPort;
     notifyListeners();
   }
 
@@ -79,7 +84,7 @@ mixin ConnectionMixin on BaseCanvasController {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       start: startPort!,
       end: endPort,
-      bendPoints: [], // New wires start as straight lines
+      bendPoints: pendingBendPoints, // Keep the bend points!
       color: activeDragColor ?? Colors.yellow,
     );
 
@@ -91,6 +96,9 @@ mixin ConnectionMixin on BaseCanvasController {
     startPort = null;
     currentDragPosition = null;
     activeDragColor = null;
+    pendingBendPoints = [];
+    isMovingWireEndpoint = false;
+    originalDetachedPort = null;
     notifyListeners();
   }
 
@@ -191,7 +199,7 @@ mixin ConnectionMixin on BaseCanvasController {
         : selectedWireIds.first;
     final wire = wires.firstWhere((w) => w.id == wireId);
     
-    // Grab existing handle (start and end points are handled by components, not by bend point dragging)
+    // Grab existing bend point handle
     for (int i = 0; i < wire.bendPoints.length; i++) {
       if ((canvasPosition - wire.bendPoints[i]).distance < 15.0) {
         draggingWireId = wire.id;

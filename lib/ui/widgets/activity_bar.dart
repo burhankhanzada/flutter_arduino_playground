@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_arduino_playground/providers/sidebar_provider.dart';
 
 class ActivityBar extends ConsumerWidget {
@@ -34,17 +35,23 @@ class ActivityBar extends ConsumerWidget {
             activeTab: activeTab,
             tooltip: 'Property Panel',
           ),
-          // _ActivityIcon(
-          //   icon: Icons.bug_report,
-          //   tab: SidebarTab.debugConsole,
-          //   activeTab: activeTab,
-          //   tooltip: 'Debug Console',
-          // ),
+          _ActivityIcon(
+            icon: Icons.bug_report,
+            tab: SidebarTab.debugConsole,
+            activeTab: activeTab,
+            tooltip: 'Debug Console',
+          ),
           _ActivityIcon(
             icon: Icons.terminal,
             tab: SidebarTab.serialOutput,
             activeTab: activeTab,
             tooltip: 'Serial Output',
+          ),
+          _ActivityIcon(
+            icon: Icons.waves,
+            tab: SidebarTab.spiceLogs,
+            activeTab: activeTab,
+            tooltip: 'SPICE Logs',
           ),
         ],
       ),

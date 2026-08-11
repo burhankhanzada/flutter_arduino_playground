@@ -8,13 +8,25 @@ class LEDPainter extends CustomPainter with PortProvider {
   final _paint = Paint();
   final ValueNotifier<bool> _isOnNotifier;
   final ValueNotifier<Color> _colorNotifier;
+  final ValueNotifier<bool> _hasErrorNotifier;
 
-  LEDPainter._(this._isOnNotifier, this._colorNotifier)
-    : super(repaint: Listenable.merge([_isOnNotifier, _colorNotifier]));
+  LEDPainter._(this._isOnNotifier, this._colorNotifier, this._hasErrorNotifier)
+    : super(repaint: Listenable.merge([_isOnNotifier, _colorNotifier, _hasErrorNotifier]));
 
   factory LEDPainter() => LEDPainter._(
     ValueNotifier<bool>(false),
     ValueNotifier<Color>(Colors.redAccent),
+    ValueNotifier<bool>(false),
+  );
+
+  factory LEDPainter.withState({
+    bool isOn = false,
+    Color color = Colors.redAccent,
+    bool hasError = false,
+  }) => LEDPainter._(
+    ValueNotifier<bool>(isOn),
+    ValueNotifier<Color>(color),
+    ValueNotifier<bool>(hasError),
   );
 
   bool get isOn => _isOnNotifier.value;
@@ -22,6 +34,9 @@ class LEDPainter extends CustomPainter with PortProvider {
 
   Color get color => _colorNotifier.value;
   set color(Color value) => _colorNotifier.value = value;
+
+  bool get hasError => _hasErrorNotifier.value;
+  set hasError(bool value) => _hasErrorNotifier.value = value;
 
   bool drawGlow = true;
 
@@ -43,12 +58,12 @@ class LEDPainter extends CustomPainter with PortProvider {
       const ComponentPort(
         id: 'anode',
         name: 'Anode',
-        localOffset: Offset(leftLegX, endY),
+        localOffset: Offset(rightLegX, endY),
       ),
       const ComponentPort(
         id: 'cathode',
         name: 'Cathode',
-        localOffset: Offset(rightLegX, endY),
+        localOffset: Offset(leftLegX, endY),
       ),
     ];
   }
@@ -61,7 +76,7 @@ class LEDPainter extends CustomPainter with PortProvider {
 
   @override
   bool shouldRepaint(covariant LEDPainter oldDelegate) {
-    return oldDelegate.isOn != isOn || oldDelegate.color != color;
+    return true;
   }
 
   @override
@@ -83,10 +98,10 @@ class LEDPainter extends CustomPainter with PortProvider {
         .withLightness((hsl.lightness + 0.2).clamp(0.0, 1.0))
         .toColor();
 
-    final baseColor = isOn ? color : darkColor;
-    final highlightColor = isOn ? Colors.white70 : highlight;
+    final baseColor = isOn && !hasError ? color : darkColor;
+    final highlightColor = isOn && !hasError ? Colors.white70 : highlight;
 
-    if (isOn && drawGlow) {
+    if (isOn && !hasError && drawGlow) {
       // Draw a glowing effect
       final glowPaint = Paint()
         ..color = color.withValues(alpha: 0.5)
@@ -129,12 +144,21 @@ class LEDPainter extends CustomPainter with PortProvider {
       ),
       _paint,
     );
+    
+    if (hasError) {
+      _paint.color = Colors.red;
+      _paint.style = PaintingStyle.stroke;
+      _paint.strokeWidth = 3;
+      canvas.drawLine(const Offset(5, 5), const Offset(_width - 5, _bodyHeight - 5), _paint);
+      canvas.drawLine(const Offset(_width - 5, 5), const Offset(5, _bodyHeight - 5), _paint);
+    }
   }
 
   void _drawLegs(Canvas canvas) {
     _paint.strokeWidth = 4;
     _paint.strokeCap = StrokeCap.round;
     _paint.color = Colors.grey[400]!;
+    _paint.style = PaintingStyle.stroke;
 
     const leftLegX = GridSystem.cellCenter;
     const rightLegX = _width - GridSystem.cellCenter;
@@ -145,9 +169,21 @@ class LEDPainter extends CustomPainter with PortProvider {
     // Legs end exactly at the hole center in the bottom-most grid cell
     const endY = _height - GridSystem.cellCenter;
 
-    for (final x in [leftLegX, rightLegX]) {
-      canvas.drawLine(Offset(x, startY), Offset(x, endY), _paint);
-    }
+    // Cathode (Left Leg) - Straight
+    canvas.drawLine(Offset(leftLegX, startY), Offset(leftLegX, endY), _paint);
+
+    // Anode (Right Leg) - Kinked
+    final anodeStartX = rightLegX - 8.0; // Starts closer to the center
+    final bendStartY = startY + 4.0;
+    final bendEndY = startY + 10.0;
+
+    final path = Path();
+    path.moveTo(anodeStartX, startY);
+    path.lineTo(anodeStartX, bendStartY);
+    path.lineTo(rightLegX, bendEndY);
+    path.lineTo(rightLegX, endY);
+    
+    canvas.drawPath(path, _paint);
   }
 }
 

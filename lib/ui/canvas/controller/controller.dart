@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -166,6 +166,40 @@ class CanvasController extends BaseCanvasController
     }
   }
 
+  void updateNode(LocalKey key, {
+    Offset? position,
+    double? rotationAngle,
+    bool? flipHorizontal,
+    bool? flipVertical,
+    double? customWidth,
+    double? customHeight,
+    bool clearCustomWidth = false,
+    bool clearCustomHeight = false,
+  }) {
+    final index = nodes.indexWhere((n) => n.key == key);
+    if (index != -1) {
+      saveHistory();
+      final node = nodes[index];
+      final updatedNode = node.copyWith(
+        position: position ?? node.position,
+        rotationAngle: rotationAngle ?? node.rotationAngle,
+        flipHorizontal: flipHorizontal ?? node.flipHorizontal,
+        flipVertical: flipVertical ?? node.flipVertical,
+        customWidth: customWidth,
+        customHeight: customHeight,
+        clearCustomWidth: clearCustomWidth,
+        clearCustomHeight: clearCustomHeight,
+      );
+      nodes[index] = updatedNode;
+      
+      final selIndex = selectedNodes.indexWhere((n) => n.key == key);
+      if (selIndex != -1) {
+        selectedNodes[selIndex] = nodes[index];
+      }
+      notifyListeners();
+    }
+  }
+
   void fitToContent(Size viewportSize) {
     if (nodes.isEmpty) {
       centerOrigin(viewportSize);
@@ -199,7 +233,7 @@ class CanvasController extends BaseCanvasController
     if (!scaleX.isFinite) scaleX = 1.0;
     if (!scaleY.isFinite) scaleY = 1.0;
 
-    double targetScale = math.min(scaleX, scaleY).clamp(minScale, maxScale);
+    double targetScale = min(scaleX, scaleY).clamp(minScale, maxScale);
 
     final matrix = Matrix4.identity()
       ..translateByDouble(
@@ -253,7 +287,7 @@ class CanvasController extends BaseCanvasController
 
       final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
       final updatedNode = oldNode.copyWith(
-        rotationAngle: oldNode.rotationAngle + (math.pi / 18),
+        rotationAngle: oldNode.rotationAngle + (pi / 18),
       );
       final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
       final finalNode = updatedNode.copyWith(position: newPosition);
@@ -275,7 +309,7 @@ class CanvasController extends BaseCanvasController
 
       final oldPivotCanvas = oldNode.position + oldNode.pivotOffset;
       final updatedNode = oldNode.copyWith(
-        rotationAngle: oldNode.rotationAngle - (math.pi / 18),
+        rotationAngle: oldNode.rotationAngle - (pi / 18),
       );
       final newPosition = oldPivotCanvas - updatedNode.pivotOffset;
       final finalNode = updatedNode.copyWith(position: newPosition);

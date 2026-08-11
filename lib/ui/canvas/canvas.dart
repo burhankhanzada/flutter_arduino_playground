@@ -119,6 +119,7 @@ class CanvasState extends State<Canvas> {
                               selectedWireIds: controller.selectedWireIds,
                               selectionColor: Theme.of(context).colorScheme.primary,
                               pendingColor: controller.activeDragColor ?? Colors.yellow,
+                              pendingBendPoints: controller.pendingBendPoints,
                             ),
                           ),
                         ),
